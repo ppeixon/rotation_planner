@@ -64,61 +64,41 @@ export function Dashboard() {
     const event = events[dateKey];
 
     if (view === "annual") {
-      // Solo editamos bloques de Rotación o Vacaciones (incluyendo sus viajes asociados)
-      if (event && (event.dayType === "ROTATION" || event.dayType === "VACATION" || event.dayType === "TRAVEL_ENTRY" || event.dayType === "TRAVEL_EXIT")) {
+      if (event && ["ROTATION", "VACATION", "TRAVEL_ENTRY", "TRAVEL_EXIT"].includes(event.dayType)) {
         let start = date;
         
-        // Si clicamos en un viaje, identificamos a qué bloque pertenece
         const targetType = (event.dayType === "TRAVEL_ENTRY") ? "VACATION" : 
                          (event.dayType === "TRAVEL_EXIT") ? "ROTATION" : 
                          event.dayType;
 
-        // Búsqueda del inicio del bloque real (incluyendo el viaje inicial si lo hubiera o retrocediendo en el mismo tipo)
+        // Buscar inicio del bloque
         let checkDate = subDays(date, 1);
         while (true) {
-          const prevEvent = events[format(checkDate, "yyyy-MM-dd")];
-          if (!prevEvent) break;
-          
-          if (targetType === "VACATION") {
-            if (prevEvent.dayType === "VACATION") {
-              start = checkDate;
-              checkDate = subDays(checkDate, 1);
-            } else {
-              break;
-            }
-          } else if (targetType === "ROTATION") {
-            if (prevEvent.dayType === "ROTATION") {
-              start = checkDate;
-              checkDate = subDays(checkDate, 1);
-            } else {
-              break;
-            }
-          }
+          const prevKey = format(checkDate, "yyyy-MM-dd");
+          const prevEvent = events[prevKey];
+          if (!prevEvent || prevEvent.dayType !== targetType) break;
+          start = checkDate;
+          checkDate = subDays(checkDate, 1);
         }
 
-        // Calcular duración total sumando el tipo base + el viaje final correspondiente
+        // Calcular duración escaneando hasta el día de viaje final
         let finalDuration = 0;
         let scanDate = start;
+        const travelType = targetType === "ROTATION" ? "TRAVEL_EXIT" : "TRAVEL_ENTRY";
+        
         while (true) {
-          const currentEvent = events[format(scanDate, "yyyy-MM-dd")];
+          const currentKey = format(scanDate, "yyyy-MM-dd");
+          const currentEvent = events[currentKey];
           if (!currentEvent) break;
           
-          if (targetType === "VACATION") {
-            if (currentEvent.dayType === "VACATION" || currentEvent.dayType === "TRAVEL_ENTRY") {
-              finalDuration++;
-              scanDate = addDays(scanDate, 1);
-              if (currentEvent.dayType === "TRAVEL_ENTRY") break; // Fin del bloque vacaciones
-            } else {
-              break;
-            }
-          } else if (targetType === "ROTATION") {
-            if (currentEvent.dayType === "ROTATION" || currentEvent.dayType === "TRAVEL_EXIT") {
-              finalDuration++;
-              scanDate = addDays(scanDate, 1);
-              if (currentEvent.dayType === "TRAVEL_EXIT") break; // Fin del bloque rotación
-            } else {
-              break;
-            }
+          if (currentEvent.dayType === targetType) {
+            finalDuration++;
+            scanDate = addDays(scanDate, 1);
+          } else if (currentEvent.dayType === travelType) {
+            finalDuration++;
+            break; // Fin del bloque con su viaje
+          } else {
+            break;
           }
         }
 
@@ -138,19 +118,13 @@ export function Dashboard() {
   };
 
   const next = () => {
-    if (view === "monthly") {
-      setCurrentDate(addMonths(currentDate, 1));
-    } else {
-      setCurrentDate(addYears(currentDate, 1));
-    }
+    if (view === "monthly") setCurrentDate(addMonths(currentDate, 1));
+    else setCurrentDate(addYears(currentDate, 1));
   };
 
   const prev = () => {
-    if (view === "monthly") {
-      setCurrentDate(subMonths(currentDate, 1));
-    } else {
-      setCurrentDate(subYears(currentDate, 1));
-    }
+    if (view === "monthly") setCurrentDate(subMonths(currentDate, 1));
+    else setCurrentDate(subYears(currentDate, 1));
   };
 
   const yearMonths = eachMonthOfInterval({
@@ -297,27 +271,6 @@ export function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-
-            <div className="hidden md:block p-4 border rounded-xl bg-card">
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Info className="w-4 h-4 text-primary" />
-                Resumen de cuenta
-              </h3>
-              <div className="text-xs space-y-2">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Usuario:</span>
-                  <span className="text-foreground">{user?.displayName || "Admin"}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Email:</span>
-                  <span className="text-foreground truncate ml-4">{user?.email}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Sincronización:</span>
-                  <span className="text-emerald-500 font-bold">ACTIVA</span>
-                </div>
-              </div>
-            </div>
           </aside>
 
           <section className="flex-1 space-y-6">
