@@ -5,8 +5,8 @@ import { useState, useEffect } from "react";
 import { doc, onSnapshot, collection } from "firebase/firestore";
 import { useFirestore, setDocumentNonBlocking } from "@/firebase";
 import { useAuth } from "./useAuth";
-import { DayEvent, UserSettings } from "@/lib/types";
-import { format, addDays, isBefore, startOfDay } from "date-fns";
+import { DayEvent, UserSettings, DayType } from "@/lib/types";
+import { format, addDays, isBefore, startOfDay, differenceInDays } from "date-fns";
 
 export function useRotation() {
   const { user } = useAuth();
@@ -90,29 +90,43 @@ export function useRotation() {
     }, { merge: true });
 
     const totalDays = settings.generateMonthsAhead * 31;
-    let current = startOfDay(startDate);
-    const endGeneration = addDays(current, totalDays);
+    // Empezamos un día antes para poder marcar el primer día de viaje (d-1)
+    let current = addDays(startOfDay(startDate), -1);
+    const endGeneration = addDays(current, totalDays + 2);
 
     while (isBefore(current, endGeneration)) {
       const dateKey = format(current, "yyyy-MM-dd");
       const existing = events[dateKey];
       
+      // Solo sobreescribimos si no hay nada o si lo que hay fue generado automáticamente
       if (!existing || existing.source === "GENERATED") {
-        const diffInDays = Math.floor((current.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const cycleDay = diffInDays % 56;
+        const diffInDays = differenceInDays(current, startDate);
+        // Ciclo de 56 días (28 trabajo + 28 descanso)
+        const cycleDay = ((diffInDays % 56) + 56) % 56;
         
-        if (cycleDay < 28) {
-           const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
-           setDocumentNonBlocking(dayRef, {
-             id: dateKey,
-             dateKey,
-             dayType: "ROTATION",
-             flightTicketPurchased: false,
-             source: "GENERATED",
-             updatedAt: Date.now(),
-             updatedBy: user.uid,
-             userId: user.uid
-           }, { merge: true });
+        let targetType: DayType = "NORMAL";
+        
+        if (cycleDay >= 0 && cycleDay < 28) {
+          // Bloque de rotación (28 días)
+          targetType = "ROTATION";
+        } else if (cycleDay === 55) {
+          // Día d-1 (el día anterior al inicio de la rotación)
+          targetType = "TRAVEL";
+        }
+
+        // Si es un día especial del ciclo o si era generado y ahora debe ser normal, actualizamos
+        if (targetType !== "NORMAL" || (existing && existing.dayType !== "NORMAL")) {
+          const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
+          setDocumentNonBlocking(dayRef, {
+            id: dateKey,
+            dateKey,
+            dayType: targetType,
+            flightTicketPurchased: false,
+            source: "GENERATED",
+            updatedAt: Date.now(),
+            updatedBy: user.uid,
+            userId: user.uid
+          }, { merge: true });
         }
       }
       current = addDays(current, 1);
