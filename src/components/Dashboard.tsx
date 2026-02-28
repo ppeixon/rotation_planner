@@ -34,7 +34,7 @@ export function Dashboard() {
   const { events, settings, loading, updateDay, generateRotations } = useRotation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingDate, setEditingDate] = useState<string | null>(null);
-  const [view, setView] = useState<"annual" | "monthly">("monthly");
+  const [view, setView] = useState<"annual" | "monthly">("annual");
 
   if (loading) {
     return (
@@ -46,7 +46,12 @@ export function Dashboard() {
   }
 
   const handleDayClick = (date: Date) => {
-    setEditingDate(format(date, "yyyy-MM-dd"));
+    if (view === "annual") {
+      setCurrentDate(date);
+      setView("monthly");
+    } else {
+      setEditingDate(format(date, "yyyy-MM-dd"));
+    }
   };
 
   const nextPeriod = () => {
