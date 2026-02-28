@@ -67,9 +67,19 @@ export function useRotation() {
 
   const internalUpdateDay = (dateKey: string, type: DayType, source: "MANUAL" | "GENERATED" = "GENERATED") => {
     if (!user || !db) return;
-    const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
-    const existing = events[dateKey];
     
+    // Respetar prioridad de entradas manuales: si existe y es MANUAL, no sobreescribir con lógica automática
+    const existing = events[dateKey];
+    if (source === "GENERATED" && existing?.source === "MANUAL") {
+      return;
+    }
+
+    // Evitar escrituras redundantes si el tipo ya es el correcto
+    if (existing?.dayType === type && existing?.source === source) {
+      return;
+    }
+
+    const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
     setDocumentNonBlocking(dayRef, {
       id: dateKey,
       dateKey,
@@ -105,10 +115,10 @@ export function useRotation() {
     setDocumentNonBlocking(dayRef, newEvent, { merge: true });
   };
 
-  const generateRotations = (startDate: Date) => {
+  const generateRotations = (startDateKey: string) => {
     if (!user || !settings || !db) return;
     
-    const start = startOfDay(startDate);
+    const start = startOfDay(parseISO(startDateKey));
     const currentYear = start.getFullYear();
     const endGen = endOfYear(start);
 
@@ -121,14 +131,14 @@ export function useRotation() {
 
     let current = start;
 
-    // TRAVEL day always before starting a rotation block
+    // TRAVEL day siempre antes de empezar un bloque de rotación
     const preTravel = subDays(current, 1);
     if (preTravel.getFullYear() === currentYear) {
       internalUpdateDay(format(preTravel, "yyyy-MM-dd"), "TRAVEL", "GENERATED");
     }
 
     while (isBefore(current, addDays(endGen, 1))) {
-      // Rotation Block (28 days)
+      // Bloque de Rotación (28 días)
       for (let i = 0; i < 28; i++) {
         if (current.getFullYear() !== currentYear) break;
         internalUpdateDay(format(current, "yyyy-MM-dd"), "ROTATION", "GENERATED");
@@ -136,7 +146,7 @@ export function useRotation() {
       }
       if (current.getFullYear() !== currentYear) break;
 
-      // Vacation Block (28 days: 27 VACATION + 1 TRAVEL)
+      // Bloque de Vacaciones (28 días: 27 VACATION + 1 TRAVEL)
       for (let i = 0; i < 27; i++) {
         if (current.getFullYear() !== currentYear) break;
         internalUpdateDay(format(current, "yyyy-MM-dd"), "VACATION", "GENERATED");
@@ -144,7 +154,7 @@ export function useRotation() {
       }
       if (current.getFullYear() !== currentYear) break;
       
-      // Last day of vacation sequence is ALWAYS TRAVEL
+      // El último día de la secuencia de vacaciones es SIEMPRE TRAVEL
       internalUpdateDay(format(current, "yyyy-MM-dd"), "TRAVEL", "GENERATED");
       current = addDays(current, 1);
     }
@@ -158,21 +168,22 @@ export function useRotation() {
     const endGen = endOfYear(start);
     let current = start;
 
+    // 1. Aplicar el bloque editado
     if (type === "ROTATION") {
-      // 1. Mandatory TRAVEL before rotation
+      // TRAVEL obligatorio antes de rotación
       const preTravel = subDays(start, 1);
       if (preTravel.getFullYear() === currentYear) {
         internalUpdateDay(format(preTravel, "yyyy-MM-dd"), "TRAVEL", "GENERATED");
       }
 
-      // 2. Set the rotation block
+      // Marcar los nuevos días de rotación
       for (let i = 0; i < newDuration; i++) {
         if (current.getFullYear() !== currentYear) break;
         internalUpdateDay(format(current, "yyyy-MM-dd"), "ROTATION", "GENERATED");
         current = addDays(current, 1);
       }
     } else {
-      // VACATION block: x-1 vacation + 1 travel
+      // Bloque VACATION: n-1 vacaciones + 1 viaje
       for (let i = 0; i < newDuration - 1; i++) {
         if (current.getFullYear() !== currentYear) break;
         internalUpdateDay(format(current, "yyyy-MM-dd"), "VACATION", "GENERATED");
@@ -184,21 +195,20 @@ export function useRotation() {
       }
     }
 
-    // 3. Continue the chain with default 28/28 blocks until end of year
-    // If we just finished ROTATION, next is VACATION. If we finished VACATION, next is ROTATION.
+    // 2. Continuar la cadena con bloques estandard 28/28 hasta final de año
     let nextIsRotation = (type === "VACATION");
 
-    while (isBefore(current, addDays(endGen, 1))) {
+    while (isBefore(current, addDays(endGen, 1)) && current.getFullYear() === currentYear) {
       if (nextIsRotation) {
-        // Rotation block always starts with a TRAVEL day if it's not immediately following a vacation TRAVEL day
-        // (But according to logic, the vacation block already ends in TRAVEL, which serves as the pre-rotation TRAVEL)
+        // Bloque Rotación estándar (28 días)
+        // No necesita TRAVEL adicional porque el bloque previo de vacaciones ya terminó en TRAVEL
         for (let i = 0; i < 28; i++) {
           if (current.getFullYear() !== currentYear) break;
           internalUpdateDay(format(current, "yyyy-MM-dd"), "ROTATION", "GENERATED");
           current = addDays(current, 1);
         }
       } else {
-        // Standard Vacation block: 27 VACATION + 1 TRAVEL
+        // Bloque Vacaciones estándar (27 VAC + 1 TRAVEL)
         for (let i = 0; i < 27; i++) {
           if (current.getFullYear() !== currentYear) break;
           internalUpdateDay(format(current, "yyyy-MM-dd"), "VACATION", "GENERATED");

@@ -18,7 +18,7 @@ import { RefreshCw, Play, CalendarRange } from "lucide-react";
 import { format } from "date-fns";
 
 interface RotationGeneratorProps {
-  onGenerate: (startDate: Date) => void;
+  onGenerate: (startDateKey: string) => void;
   isGenerating?: boolean;
   defaultDate?: string;
 }
@@ -35,7 +35,8 @@ export function RotationGenerator({ onGenerate, isGenerating, defaultDate }: Rot
   }, [open, defaultDate]);
 
   const handleGenerate = () => {
-    onGenerate(new Date(startDate));
+    // Pasar directamente el string de la fecha para evitar desfases de zona horaria con el objeto Date
+    onGenerate(startDate);
     setOpen(false);
   };
 
