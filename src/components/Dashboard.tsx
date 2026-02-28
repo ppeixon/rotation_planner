@@ -1,0 +1,201 @@
+"use client";
+
+import React, { useState } from "react";
+import { useRotation } from "@/hooks/useRotation";
+import { MonthGrid } from "./Calendar/MonthGrid";
+import { DayEditor } from "./Calendar/DayEditor";
+import { RotationGenerator } from "./RotationGenerator";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  format, 
+  addMonths, 
+  subMonths, 
+  startOfYear, 
+  eachMonthOfInterval, 
+  endOfYear,
+  addYears,
+  subYears,
+  startOfMonth
+} from "date-fns";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  LayoutGrid, 
+  Calendar as CalendarIcon, 
+  Info,
+  LogOut,
+  Settings
+} from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+
+export function Dashboard() {
+  const { user, logout } = useAuth();
+  const { events, settings, loading, updateDay, generateRotations } = useRotation();
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [editingDate, setEditingDate] = useState<string | null>(null);
+  const [view, setView] = useState<"annual" | "monthly">("monthly");
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-muted-foreground animate-pulse">Sincronizando con la nube...</p>
+      </div>
+    );
+  }
+
+  const handleDayClick = (date: Date) => {
+    setEditingDate(format(date, "yyyy-MM-dd"));
+  };
+
+  const nextPeriod = () => {
+    if (view === "monthly") setCurrentDate(addMonths(currentDate, 1));
+    else setCurrentDate(addYears(currentDate, 1));
+  };
+
+  const prevPeriod = () => {
+    if (view === "monthly") setCurrentDate(subMonths(currentDate, 1));
+    else setCurrentDate(subYears(currentDate, 1));
+  };
+
+  const yearMonths = eachMonthOfInterval({
+    start: startOfYear(currentDate),
+    end: endOfYear(currentDate),
+  });
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background text-foreground font-body">
+      {/* Header */}
+      <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary p-2 rounded-lg">
+              <CalendarIcon className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <h1 className="font-headline font-bold text-lg hidden sm:block">Algeria Rotation Planner</h1>
+            <h1 className="font-headline font-bold text-lg sm:hidden">ARP</h1>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2 mr-4">
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#FF8C00]/10 rounded border border-[#FF8C00]/30">
+                <div className="w-2 h-2 rounded-full bg-[#FF8C00]" />
+                <span className="text-[10px] font-bold text-[#FF8C00]">ROTACIÓN</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#3CB371]/10 rounded border border-[#3CB371]/30">
+                <div className="w-2 h-2 rounded-full bg-[#3CB371]" />
+                <span className="text-[10px] font-bold text-[#3CB371]">VIAJE</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#1E90FF]/10 rounded border border-[#1E90FF]/30">
+                <div className="w-2 h-2 rounded-full bg-[#1E90FF]" />
+                <span className="text-[10px] font-bold text-[#1E90FF]">VACACIONES</span>
+              </div>
+            </div>
+
+            <Button variant="ghost" size="icon" onClick={() => logout()}>
+              <LogOut className="w-5 h-5 text-muted-foreground" />
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 container mx-auto px-4 py-6 md:py-10">
+        <div className="flex flex-col md:flex-row gap-8">
+          
+          {/* Left Sidebar Actions (Desktop) / Top Actions (Mobile) */}
+          <aside className="w-full md:w-80 space-y-6 shrink-0">
+            <RotationGenerator onGenerate={generateRotations} />
+            
+            <div className="hidden md:block p-4 border rounded-xl bg-card">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <Info className="w-4 h-4 text-primary" />
+                Resumen de cuenta
+              </h3>
+              <div className="text-xs space-y-2">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Usuario:</span>
+                  <span className="text-foreground">{user?.displayName || "Admin"}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Email:</span>
+                  <span className="text-foreground truncate ml-4">{user?.email}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Sincronización:</span>
+                  <span className="text-emerald-500 font-bold">ACTIVA</span>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* Calendar Area */}
+          <section className="flex-1 space-y-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="w-full sm:w-auto">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="monthly" className="gap-2">
+                    <CalendarIcon className="w-4 h-4" /> Mes
+                  </TabsTrigger>
+                  <TabsTrigger value="annual" className="gap-2">
+                    <LayoutGrid className="w-4 h-4" /> Año
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              <div className="flex items-center gap-4 bg-card px-4 py-2 rounded-full border shadow-sm">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prevPeriod}>
+                  <ChevronLeft className="w-5 h-5" />
+                </Button>
+                <h2 className="font-headline font-bold text-base min-w-[120px] text-center">
+                  {view === "monthly" ? format(currentDate, "MMMM yyyy") : format(currentDate, "yyyy")}
+                </h2>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={nextPeriod}>
+                  <ChevronRight className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-card border rounded-2xl p-4 sm:p-6 shadow-sm min-h-[500px]">
+              {view === "monthly" ? (
+                <MonthGrid 
+                  monthDate={startOfMonth(currentDate)} 
+                  events={events} 
+                  onDayClick={handleDayClick} 
+                />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {yearMonths.map((m) => (
+                    <div key={m.getTime()} className="space-y-3">
+                      <h3 className="text-sm font-bold text-primary pl-1 uppercase tracking-wider">{format(m, "MMMM")}</h3>
+                      <MonthGrid 
+                        monthDate={m} 
+                        events={events} 
+                        mini 
+                        onDayClick={handleDayClick} 
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <DayEditor 
+        date={editingDate} 
+        event={editingDate ? events[editingDate] : undefined}
+        onClose={() => setEditingDate(null)}
+        onSave={updateDay}
+      />
+      
+      <footer className="py-6 border-t bg-muted/20 mt-12">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-xs text-muted-foreground">RotationVista &copy; {new Date().getFullYear()} - Gestión de Rotaciones Argelia</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
