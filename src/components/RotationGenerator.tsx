@@ -45,7 +45,7 @@ export function RotationGenerator({ onGenerate, isGenerating }: RotationGenerato
             Generador de Rotación
           </DialogTitle>
           <DialogDescription className="text-sm">
-            Define la fecha de inicio de tu próxima rotación. Se generarán bloques de 28 días automáticamente para los próximos 18 meses.
+            Define la fecha de inicio de tu próxima rotación. Se generarán bloques de 28 días automáticamente **solo para el año en curso** de la fecha seleccionada.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
@@ -61,7 +61,7 @@ export function RotationGenerator({ onGenerate, isGenerating }: RotationGenerato
           </div>
           <div className="bg-muted/50 p-4 rounded-2xl border border-muted-foreground/10">
             <p className="text-xs text-muted-foreground leading-relaxed italic">
-              <strong>Nota:</strong> Este proceso completará automáticamente tus días de trabajo (rotación), el día d-1 como viaje y el resto como vacaciones.
+              <strong>Nota:</strong> Este proceso solo afectará a los días del mismo año que la fecha elegida. Los años anteriores y posteriores no se verán modificados.
             </p>
           </div>
         </div>
