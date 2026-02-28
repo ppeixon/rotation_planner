@@ -6,7 +6,8 @@ import { MonthGrid } from "./Calendar/MonthGrid";
 import { DayEditor } from "./Calendar/DayEditor";
 import { RotationGenerator } from "./RotationGenerator";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { 
   format, 
   addMonths, 
@@ -25,13 +26,13 @@ import {
   Calendar as CalendarIcon, 
   Info,
   LogOut,
-  Settings
+  BarChart3
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 export function Dashboard() {
   const { user, logout } = useAuth();
-  const { events, settings, loading, updateDay, generateRotations } = useRotation();
+  const { events, loading, updateDay, generateRotations } = useRotation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [view, setView] = useState<"annual" | "monthly">("annual");
@@ -68,6 +69,15 @@ export function Dashboard() {
     start: startOfYear(currentDate),
     end: endOfYear(currentDate),
   });
+
+  // Calcular estadísticas basadas en el periodo visible (año o mes)
+  const periodPrefix = view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "yyyy-MM");
+  const stats = Object.entries(events).reduce((acc, [dateKey, event]) => {
+    if (dateKey.startsWith(periodPrefix)) {
+      acc[event.dayType] = (acc[event.dayType] || 0) + 1;
+    }
+    return acc;
+  }, { ROTATION: 0, TRAVEL: 0, VACATION: 0, NORMAL: 0 } as Record<string, number>);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-body">
@@ -109,10 +119,43 @@ export function Dashboard() {
       <main className="flex-1 container mx-auto px-4 py-6 md:py-10">
         <div className="flex flex-col md:flex-row gap-8">
           
-          {/* Left Sidebar Actions (Desktop) / Top Actions (Mobile) */}
+          {/* Left Sidebar Actions */}
           <aside className="w-full md:w-80 space-y-6 shrink-0">
             <RotationGenerator onGenerate={generateRotations} />
             
+            {/* Stats Card */}
+            <Card className="shadow-sm border-muted">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  Estadísticas {view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "MMM yyyy")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#FF8C00]/5 border border-[#FF8C00]/10">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#FF8C00]" />
+                    <span className="text-xs font-medium uppercase tracking-tight">Rotación</span>
+                  </div>
+                  <span className="text-sm font-bold text-[#FF8C00]">{stats.ROTATION} d</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#3CB371]/5 border border-[#3CB371]/10">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#3CB371]" />
+                    <span className="text-xs font-medium uppercase tracking-tight">Viaje</span>
+                  </div>
+                  <span className="text-sm font-bold text-[#3CB371]">{stats.TRAVEL} d</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#1E90FF]/5 border border-[#1E90FF]/10">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#1E90FF]" />
+                    <span className="text-xs font-medium uppercase tracking-tight">Vacaciones</span>
+                  </div>
+                  <span className="text-sm font-bold text-[#1E90FF]">{stats.VACATION} d</span>
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="hidden md:block p-4 border rounded-xl bg-card">
               <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
                 <Info className="w-4 h-4 text-primary" />
