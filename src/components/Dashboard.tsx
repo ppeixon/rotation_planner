@@ -22,7 +22,7 @@ import {
   startOfMonth,
   parseISO,
   subDays,
-  isSameDay,
+  addDays,
   getDaysInMonth
 } from "date-fns";
 import { 
@@ -44,7 +44,6 @@ export function Dashboard() {
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [view, setView] = useState<"annual" | "monthly">("annual");
 
-  // State for Block Editor
   const [blockEditorOpen, setBlockEditorOpen] = useState(false);
   const [blockData, setBlockData] = useState<{
     startDate: string;
@@ -66,28 +65,52 @@ export function Dashboard() {
     const event = events[dateKey];
 
     if (view === "annual") {
-      if (event && (event.dayType === "ROTATION" || event.dayType === "VACATION")) {
-        // Find the start of the block
+      if (event && (event.dayType === "ROTATION" || event.dayType === "VACATION" || event.dayType === "TRAVEL")) {
         let start = date;
-        let duration = 1;
-        const targetType = event.dayType;
+        let targetType = event.dayType;
 
-        // Iterate backward to find the first day of the block
-        let checkDate = subDays(date, 1);
-        while (events[format(checkDate, "yyyy-MM-dd")]?.dayType === targetType) {
-          start = checkDate;
-          duration++;
-          checkDate = subDays(checkDate, 1);
+        // Si es un día de viaje, detectamos si pertenece al final de un bloque de vacaciones
+        if (targetType === "TRAVEL") {
+          const dayBefore = subDays(date, 1);
+          if (events[format(dayBefore, "yyyy-MM-dd")]?.dayType === "VACATION") {
+            targetType = "VACATION";
+            let checkDate = dayBefore;
+            while (events[format(checkDate, "yyyy-MM-dd")]?.dayType === "VACATION") {
+              start = checkDate;
+              checkDate = subDays(checkDate, 1);
+            }
+          } else {
+            // Si es un viaje suelto, vamos a la vista mensual
+            setCurrentDate(date);
+            setView("monthly");
+            return;
+          }
+        } else {
+          // Búsqueda estándar del inicio del bloque
+          let checkDate = subDays(date, 1);
+          while (events[format(checkDate, "yyyy-MM-dd")]?.dayType === targetType) {
+            start = checkDate;
+            checkDate = subDays(checkDate, 1);
+          }
         }
-        
-        // Re-calculating duration accurately
+
+        // Calcular duración total del bloque detectado
         let finalDuration = 0;
         let scanDate = start;
-        while (events[format(scanDate, "yyyy-MM-dd")]?.dayType === targetType) {
-          finalDuration++;
-          const actualNext = new Date(scanDate);
-          actualNext.setDate(actualNext.getDate() + 1);
-          scanDate = actualNext;
+        if (targetType === "ROTATION") {
+          while (events[format(scanDate, "yyyy-MM-dd")]?.dayType === "ROTATION") {
+            finalDuration++;
+            scanDate = addDays(scanDate, 1);
+          }
+        } else {
+          // Bloque de vacaciones: días de vacaciones + día de viaje final
+          while (events[format(scanDate, "yyyy-MM-dd")]?.dayType === "VACATION") {
+            finalDuration++;
+            scanDate = addDays(scanDate, 1);
+          }
+          if (events[format(scanDate, "yyyy-MM-dd")]?.dayType === "TRAVEL") {
+            finalDuration++;
+          }
         }
 
         setBlockData({
@@ -128,7 +151,6 @@ export function Dashboard() {
 
   const periodPrefix = view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "yyyy-MM");
   
-  // Basic counts from events
   const rawStats = Object.entries(events).reduce((acc, [dateKey, event]) => {
     if (dateKey.startsWith(periodPrefix)) {
       acc[event.dayType] = (acc[event.dayType] || 0) + 1;
@@ -136,7 +158,6 @@ export function Dashboard() {
     return acc;
   }, { ROTATION: 0, TRAVEL: 0, VACATION: 0, STANDBY: 0, NORMAL: 0 } as Record<string, number>);
 
-  // Determine total days in current period for Standby calculation
   let totalInPeriod = 0;
   if (view === "monthly") {
     totalInPeriod = getDaysInMonth(currentDate);
@@ -146,7 +167,6 @@ export function Dashboard() {
     totalInPeriod = isLeap ? 366 : 365;
   }
 
-  // Standby is the remainder: Total - (Rotation + Travel + Vacation)
   const stats = {
     ...rawStats,
     STANDBY: Math.max(0, totalInPeriod - (rawStats.ROTATION + rawStats.TRAVEL + rawStats.VACATION))
@@ -154,7 +174,6 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-body">
-      {/* Header */}
       <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 shrink-0">
@@ -203,15 +222,12 @@ export function Dashboard() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 container mx-auto px-4 py-6 md:py-10">
         <div className="flex flex-col md:flex-row gap-8">
           
-          {/* Left Sidebar Actions */}
           <aside className="w-full md:w-80 space-y-6 shrink-0">
             <RotationGenerator onGenerate={generateRotations} />
             
-            {/* Stats Card */}
             <Card className="shadow-sm border-muted">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -273,7 +289,6 @@ export function Dashboard() {
             </div>
           </aside>
 
-          {/* Calendar Area */}
           <section className="flex-1 space-y-6">
             <div className="flex items-center justify-between gap-4">
               <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="md:hidden w-full">
