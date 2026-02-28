@@ -29,7 +29,6 @@ import {
   ChevronRight, 
   LayoutGrid, 
   Calendar as CalendarIcon, 
-  Info,
   LogOut,
   BarChart3
 } from "lucide-react";
@@ -64,14 +63,12 @@ export function Dashboard() {
     const event = events[dateKey];
 
     if (view === "annual") {
-      if (event && ["ROTATION", "VACATION", "TRAVEL_ENTRY", "TRAVEL_EXIT"].includes(event.dayType)) {
+      // Solo abrir editor de bloques para los tipos base: ROTATION o VACATION
+      if (event && (event.dayType === "ROTATION" || event.dayType === "VACATION")) {
+        const targetType = event.dayType;
         let start = date;
         
-        const targetType = (event.dayType === "TRAVEL_ENTRY") ? "VACATION" : 
-                         (event.dayType === "TRAVEL_EXIT") ? "ROTATION" : 
-                         event.dayType;
-
-        // Buscar inicio del bloque
+        // Buscar inicio del bloque contiguo del mismo tipo
         let checkDate = subDays(date, 1);
         while (true) {
           const prevKey = format(checkDate, "yyyy-MM-dd");
@@ -81,25 +78,15 @@ export function Dashboard() {
           checkDate = subDays(checkDate, 1);
         }
 
-        // Calcular duración escaneando hasta el día de viaje final
+        // Calcular duración del bloque de ese tipo
         let finalDuration = 0;
         let scanDate = start;
-        const travelType = targetType === "ROTATION" ? "TRAVEL_EXIT" : "TRAVEL_ENTRY";
-        
         while (true) {
           const currentKey = format(scanDate, "yyyy-MM-dd");
           const currentEvent = events[currentKey];
-          if (!currentEvent) break;
-          
-          if (currentEvent.dayType === targetType) {
-            finalDuration++;
-            scanDate = addDays(scanDate, 1);
-          } else if (currentEvent.dayType === travelType) {
-            finalDuration++;
-            break; // Fin del bloque con su viaje
-          } else {
-            break;
-          }
+          if (!currentEvent || currentEvent.dayType !== targetType) break;
+          finalDuration++;
+          scanDate = addDays(scanDate, 1);
         }
 
         setBlockData({
@@ -109,6 +96,7 @@ export function Dashboard() {
         });
         setBlockEditorOpen(true);
       } else {
+        // Para días de viaje, standby o vacíos, saltar a la vista mensual para edición individual
         setCurrentDate(date);
         setView("monthly");
       }
@@ -186,30 +174,7 @@ export function Dashboard() {
             </TabsList>
           </Tabs>
           
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-            <div className="hidden lg:flex items-center gap-2 mr-2">
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#c6d9f1] rounded border border-[#c6d9f1]/60">
-                <div className="w-2 h-2 rounded-full bg-[#1e3a8a]" />
-                <span className="text-[10px] font-bold text-[#1e3a8a]">VACACIONES</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#3CB371]/10 rounded border border-[#3CB371]/30">
-                <div className="w-2 h-2 rounded-full bg-[#3CB371]" />
-                <span className="text-[10px] font-bold text-[#3CB371]">V. ENTRADA</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#ffc000]/10 rounded border border-[#ffc000]/30">
-                <div className="w-2 h-2 rounded-full bg-[#ffc000]" />
-                <span className="text-[10px] font-bold text-[#ffc000]">ROTACIÓN</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#ffff00]/10 rounded border border-[#ffff00]/30">
-                <div className="w-2 h-2 rounded-full bg-[#ffff00]" />
-                <span className="text-[10px] font-bold text-[#b8860b]">V. SALIDA</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-200 rounded border border-slate-300">
-                <div className="w-2 h-2 rounded-full bg-slate-400" />
-                <span className="text-[10px] font-bold text-slate-700">STANDBY</span>
-              </div>
-            </div>
-
+          <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => logout()}>
               <LogOut className="w-5 h-5 text-muted-foreground" />
             </Button>
@@ -271,6 +236,28 @@ export function Dashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            <div className="space-y-2 p-4 bg-muted/20 rounded-2xl border text-[11px] text-muted-foreground leading-tight">
+              <p className="font-bold mb-1 uppercase tracking-wider">Leyenda</p>
+              <div className="grid grid-cols-1 gap-1.5">
+                <div className="flex items-center gap-2">
+                   <div className="w-2.5 h-2.5 rounded-full bg-[#c6d9f1]" />
+                   <span>Azul: Vacaciones (26 días)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                   <div className="w-2.5 h-2.5 rounded-full bg-[#3CB371]" />
+                   <span>Verde: Viaje Entrada (1 día)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                   <div className="w-2.5 h-2.5 rounded-full bg-[#ffc000]" />
+                   <span>Naranja: Rotación (28 días)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                   <div className="w-2.5 h-2.5 rounded-full bg-[#ffff00]" />
+                   <span>Amarillo: Viaje Salida (1 día)</span>
+                </div>
+              </div>
+            </div>
           </aside>
 
           <section className="flex-1 space-y-6">

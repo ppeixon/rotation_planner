@@ -12,8 +12,7 @@ import {
   isBefore, 
   startOfDay, 
   parseISO, 
-  endOfYear, 
-  subDays,
+  endOfYear,
   isSameDay
 } from "date-fns";
 
@@ -69,6 +68,7 @@ export function useRotation() {
     if (!user || !db) return;
     
     const existing = events[dateKey];
+    // No sobreescribir si el día fue editado manualmente
     if (source === "GENERATED" && existing?.source === "MANUAL") {
       return;
     }
@@ -100,7 +100,7 @@ export function useRotation() {
       flightTicketPurchased: partial.flightTicketPurchased ?? existing?.flightTicketPurchased ?? false,
       flightInfo: partial.flightInfo ?? existing?.flightInfo ?? "",
       notes: partial.notes ?? existing?.notes ?? "",
-      source: partial.source ?? "MANUAL",
+      source: "MANUAL",
       updatedAt: Date.now(),
       updatedBy: user.uid,
       userId: user.uid,
@@ -109,122 +109,88 @@ export function useRotation() {
     setDocumentNonBlocking(dayRef, newEvent, { merge: true });
   };
 
-  const generateRotations = (startDateKey: string, initialType: string, initialDuration: number) => {
-    if (!user || !db) return;
-    
-    const start = startOfDay(parseISO(startDateKey));
-    const currentYear = start.getFullYear();
-    const endGen = endOfYear(start);
-    let current = start;
-
-    const applyCyclePart = (type: string, duration: number) => {
-      for (let i = 0; i < duration; i++) {
-        if (current.getFullYear() !== currentYear) break;
-        internalUpdateDay(format(current, "yyyy-MM-dd"), type as DayType, "GENERATED");
-        current = addDays(current, 1);
-      }
-    };
-
-    // 1. Aplicar el bloque inicial personalizado
-    applyCyclePart(initialType, initialDuration);
-
-    // 2. Determinar el siguiente paso
-    let nextStep = "";
-    if (initialType === "ROTATION" || initialType === "TRAVEL_EXIT") nextStep = "VACATION";
-    else nextStep = "ROTATION";
-
-    // 3. Completar el ciclo hasta fin de año (28+1 y 27+1)
-    while (current.getFullYear() === currentYear && isBefore(current, addDays(endGen, 1))) {
-      if (nextStep === "VACATION") {
-        applyCyclePart("VACATION", 27); 
-        applyCyclePart("TRAVEL_ENTRY", 1); 
-        nextStep = "ROTATION";
-      } else if (nextStep === "ROTATION") {
-        applyCyclePart("ROTATION", 28); 
-        applyCyclePart("TRAVEL_EXIT", 1); 
-        nextStep = "VACATION";
+  // Máquina de estados para rellenar el ciclo de 56 días
+  const fillRestOfYear = (current: Date, state: "VAC" | "TE" | "ROT" | "TX", currentYear: number, endGen: Date) => {
+    let iterDate = current;
+    while (iterDate.getFullYear() === currentYear && isBefore(iterDate, addDays(endGen, 1))) {
+      if (state === "VAC") {
+        for (let i = 0; i < 26; i++) {
+          if (iterDate.getFullYear() !== currentYear) break;
+          internalUpdateDay(format(iterDate, "yyyy-MM-dd"), "VACATION", "GENERATED");
+          iterDate = addDays(iterDate, 1);
+        }
+        state = "TE";
+      } else if (state === "TE") {
+        if (iterDate.getFullYear() === currentYear) {
+          internalUpdateDay(format(iterDate, "yyyy-MM-dd"), "TRAVEL_ENTRY", "GENERATED");
+          iterDate = addDays(iterDate, 1);
+        }
+        state = "ROT";
+      } else if (state === "ROT") {
+        for (let i = 0; i < 28; i++) {
+          if (iterDate.getFullYear() !== currentYear) break;
+          internalUpdateDay(format(iterDate, "yyyy-MM-dd"), "ROTATION", "GENERATED");
+          iterDate = addDays(iterDate, 1);
+        }
+        state = "TX";
+      } else if (state === "TX") {
+        if (iterDate.getFullYear() === currentYear) {
+          internalUpdateDay(format(iterDate, "yyyy-MM-dd"), "TRAVEL_EXIT", "GENERATED");
+          iterDate = addDays(iterDate, 1);
+        }
+        state = "VAC";
       }
     }
   };
 
-  const resyncChain = async (anchorDate: string, newDuration: number, type: DayType) => {
+  const generateRotations = (startDateKey: string, initialType: string, initialDuration: number) => {
+    if (!user || !db) return;
+    
+    let current = startOfDay(parseISO(startDateKey));
+    const currentYear = current.getFullYear();
+    const endGen = endOfYear(current);
+
+    // 1. Bloque inicial personalizado
+    for (let i = 0; i < initialDuration; i++) {
+      if (current.getFullYear() !== currentYear) break;
+      internalUpdateDay(format(current, "yyyy-MM-dd"), initialType as DayType, "GENERATED");
+      current = addDays(current, 1);
+    }
+
+    // 2. Determinar siguiente estado
+    let nextState: "VAC" | "TE" | "ROT" | "TX";
+    if (initialType === "VACATION") nextState = "TE";
+    else if (initialType === "TRAVEL_ENTRY") nextState = "ROT";
+    else if (initialType === "ROTATION") nextState = "TX";
+    else if (initialType === "TRAVEL_EXIT") nextState = "VAC";
+    else nextState = "VAC";
+
+    // 3. Rellenar
+    fillRestOfYear(current, nextState, currentYear, endGen);
+  };
+
+  const resyncChain = (anchorDate: string, newDuration: number, type: DayType) => {
     if (!user || !db) return;
 
-    const start = startOfDay(parseISO(anchorDate));
-    const currentYear = start.getFullYear();
-    const endGen = endOfYear(start);
-    let current = start;
+    let current = startOfDay(parseISO(anchorDate));
+    const currentYear = current.getFullYear();
+    const endGen = endOfYear(current);
 
-    // 1. Ajustar el bloque editado
-    if (type === "ROTATION") {
-      for (let i = 0; i < newDuration - 1; i++) {
-        if (current.getFullYear() !== currentYear) break;
-        internalUpdateDay(format(current, "yyyy-MM-dd"), "ROTATION", "GENERATED");
-        current = addDays(current, 1);
-      }
-      if (current.getFullYear() === currentYear) {
-        internalUpdateDay(format(current, "yyyy-MM-dd"), "TRAVEL_EXIT", "GENERATED");
-        current = addDays(current, 1);
-      }
-
-      // Ciclo posterior: VAC(27+1) -> ROT(28+1)
-      while (current.getFullYear() === currentYear && isBefore(current, endGen)) {
-        // VACATION
-        for (let i = 0; i < 27; i++) {
-          if (current.getFullYear() !== currentYear) break;
-          internalUpdateDay(format(current, "yyyy-MM-dd"), "VACATION", "GENERATED");
-          current = addDays(current, 1);
-        }
-        if (current.getFullYear() === currentYear) {
-          internalUpdateDay(format(current, "yyyy-MM-dd"), "TRAVEL_ENTRY", "GENERATED");
-          current = addDays(current, 1);
-        }
-        // ROTATION
-        for (let i = 0; i < 28; i++) {
-          if (current.getFullYear() !== currentYear) break;
-          internalUpdateDay(format(current, "yyyy-MM-dd"), "ROTATION", "GENERATED");
-          current = addDays(current, 1);
-        }
-        if (current.getFullYear() === currentYear) {
-          internalUpdateDay(format(current, "yyyy-MM-dd"), "TRAVEL_EXIT", "GENERATED");
-          current = addDays(current, 1);
-        }
-      }
-    } else if (type === "VACATION") {
-      for (let i = 0; i < newDuration - 1; i++) {
-        if (current.getFullYear() !== currentYear) break;
-        internalUpdateDay(format(current, "yyyy-MM-dd"), "VACATION", "GENERATED");
-        current = addDays(current, 1);
-      }
-      if (current.getFullYear() === currentYear) {
-        internalUpdateDay(format(current, "yyyy-MM-dd"), "TRAVEL_ENTRY", "GENERATED");
-        current = addDays(current, 1);
-      }
-
-      // Ciclo posterior: ROT(28+1) -> VAC(27+1)
-      while (current.getFullYear() === currentYear && isBefore(current, endGen)) {
-        // ROTATION
-        for (let i = 0; i < 28; i++) {
-          if (current.getFullYear() !== currentYear) break;
-          internalUpdateDay(format(current, "yyyy-MM-dd"), "ROTATION", "GENERATED");
-          current = addDays(current, 1);
-        }
-        if (current.getFullYear() === currentYear) {
-          internalUpdateDay(format(current, "yyyy-MM-dd"), "TRAVEL_EXIT", "GENERATED");
-          current = addDays(current, 1);
-        }
-        // VACATION
-        for (let i = 0; i < 27; i++) {
-          if (current.getFullYear() !== currentYear) break;
-          internalUpdateDay(format(current, "yyyy-MM-dd"), "VACATION", "GENERATED");
-          current = addDays(current, 1);
-        }
-        if (current.getFullYear() === currentYear) {
-          internalUpdateDay(format(current, "yyyy-MM-dd"), "TRAVEL_ENTRY", "GENERATED");
-          current = addDays(current, 1);
-        }
-      }
+    // 1. Aplicar bloque editado (solo VACATION o ROTATION según UI)
+    for (let i = 0; i < newDuration; i++) {
+      if (current.getFullYear() !== currentYear) break;
+      internalUpdateDay(format(current, "yyyy-MM-dd"), type, "GENERATED");
+      current = addDays(current, 1);
     }
+
+    // 2. Determinar siguiente paso tras el bloque ajustado
+    let nextState: "VAC" | "TE" | "ROT" | "TX";
+    if (type === "VACATION") nextState = "TE";
+    else if (type === "ROTATION") nextState = "TX";
+    else return;
+
+    // 3. Seguir el autómata de 56 días
+    fillRestOfYear(current, nextState, currentYear, endGen);
   };
 
   return { settings, events, loading, updateDay, generateRotations, resyncChain };
