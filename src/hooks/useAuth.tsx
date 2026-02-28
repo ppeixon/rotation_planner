@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, User, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { useAuth as useFirebaseAuth } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -36,7 +36,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [auth]);
 
   const login = async (email: string, pass: string) => {
-    if (email.toLowerCase() !== ALLOWED_EMAIL) {
+    const cleanEmail = email.trim().toLowerCase();
+    
+    if (cleanEmail !== ALLOWED_EMAIL) {
       toast({
         variant: "destructive",
         title: "Acceso denegado",
@@ -46,13 +48,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
+      // Intentar iniciar sesión
+      await signInWithEmailAndPassword(auth, cleanEmail, pass);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error de acceso",
-        description: "Credenciales incorrectas o usuario no encontrado."
-      });
+      // Si el usuario no existe, lo creamos (solo para el email permitido)
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        try {
+          await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+          toast({
+            title: "Bienvenido",
+            description: "Tu cuenta ha sido configurada correctamente."
+          });
+        } catch (regError: any) {
+          toast({
+            variant: "destructive",
+            title: "Error de acceso",
+            description: "No se pudo verificar la cuenta. Comprueba los datos."
+          });
+        }
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error de acceso",
+          description: "Credenciales incorrectas o problema de conexión."
+        });
+      }
     }
   };
 

@@ -1,43 +1,46 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
-import { doc, getDoc, setDoc, onSnapshot, collection, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { doc, setDoc, onSnapshot, collection, serverTimestamp } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
 import { useAuth } from "./useAuth";
 import { DayEvent, UserSettings } from "@/lib/types";
-import { format, addDays, isBefore, startOfDay, parseISO } from "date-fns";
+import { format, addDays, isBefore, startOfDay } from "date-fns";
 
 export function useRotation() {
   const { user } = useAuth();
+  const db = useFirestore();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [events, setEvents] = useState<Record<string, DayEvent>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !db) {
       setSettings(null);
       setEvents({});
       setLoading(false);
       return;
     }
 
-    const settingsRef = doc(db, "settings", user.uid);
+    // Siguiendo la estructura de backend.json: /users/{userId}/settings/profile
+    const settingsRef = doc(db, "users", user.uid, "settings", "profile");
     const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
       if (docSnap.exists()) {
         setSettings(docSnap.data() as UserSettings);
       } else {
-        // Default settings
         const defaultSettings: UserSettings = {
           startRotationDate: null,
           generateMonthsAhead: 18,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           updatedAt: Date.now(),
         };
-        setDoc(settingsRef, defaultSettings);
+        setDoc(settingsRef, defaultSettings, { merge: true });
       }
     });
 
-    const eventsRef = collection(db, "dayEvents", user.uid, "days");
+    // Siguiendo la estructura de backend.json: /users/{userId}/dayEvents/{dayEventId}
+    const eventsRef = collection(db, "users", user.uid, "dayEvents");
     const unsubEvents = onSnapshot(eventsRef, (querySnap) => {
       const newEvents: Record<string, DayEvent> = {};
       querySnap.forEach((doc) => {
@@ -51,11 +54,11 @@ export function useRotation() {
       unsubSettings();
       unsubEvents();
     };
-  }, [user]);
+  }, [user, db]);
 
   const updateDay = async (dateKey: string, partial: Partial<DayEvent>) => {
-    if (!user) return;
-    const dayRef = doc(db, "dayEvents", user.uid, "days", dateKey);
+    if (!user || !db) return;
+    const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
     const existing = events[dateKey];
     
     const newEvent: DayEvent = {
@@ -69,43 +72,34 @@ export function useRotation() {
       updatedBy: user.uid,
     };
     
-    await setDoc(dayRef, newEvent);
+    setDoc(dayRef, newEvent, { merge: true });
   };
 
   const generateRotations = async (startDate: Date) => {
-    if (!user || !settings) return;
+    if (!user || !settings || !db) return;
     
-    const settingsRef = doc(db, "settings", user.uid);
-    await setDoc(settingsRef, {
+    const settingsRef = doc(db, "users", user.uid, "settings", "profile");
+    setDoc(settingsRef, {
       ...settings,
       startRotationDate: startDate.getTime(),
       updatedAt: Date.now()
     }, { merge: true });
 
-    const totalDays = settings.generateMonthsAhead * 31; // Buffer
+    const totalDays = settings.generateMonthsAhead * 31;
     let current = startOfDay(startDate);
     const endGeneration = addDays(current, totalDays);
 
     while (isBefore(current, endGeneration)) {
       const dateKey = format(current, "yyyy-MM-dd");
-      
-      // Check priority: if manual Travel or Vacation exists, skip
       const existing = events[dateKey];
-      if (!existing || (existing.source === "GENERATED")) {
-        // Simple logic for 28-day rotation blocks
-        // For Algeria, let's assume 28 days ON, then we can adjust manually
-        // The prompt says "generate blocks recurrentes de 28 días como Rotación"
-        // Let's generate 28 days of ROTATION followed by 28 days of NORMAL?
-        // Actually, the user says "mis rotaciones de 28 días", usually implies 4 weeks work.
-        // Let's just mark 28 days as ROTATION starting from the start date.
-        // Usually it repeats. Let's assume 28 ON / 28 OFF.
-        
+      
+      if (!existing || existing.source === "GENERATED") {
         const diffInDays = Math.floor((current.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const cycleDay = diffInDays % 56; // 28 ON + 28 OFF cycle
+        const cycleDay = diffInDays % 56; // Ciclo de 28 ON / 28 OFF
         
         if (cycleDay < 28) {
-           const dayRef = doc(db, "dayEvents", user.uid, "days", dateKey);
-           await setDoc(dayRef, {
+           const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
+           setDoc(dayRef, {
              dateKey,
              dayType: "ROTATION",
              flightTicketPurchased: false,
