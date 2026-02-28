@@ -94,9 +94,9 @@ export function Dashboard() {
           
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-2 mr-4">
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#FFB347]/10 rounded border border-[#FFB347]/30">
-                <div className="w-2 h-2 rounded-full bg-[#FFB347]" />
-                <span className="text-[10px] font-bold text-[#FFB347]">ROTACIÓN</span>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#2B1A0A]/10 rounded border border-[#2B1A0A]/30">
+                <div className="w-2 h-2 rounded-full bg-[#2B1A0A]" />
+                <span className="text-[10px] font-bold text-[#2B1A0A]">ROTACIÓN</span>
               </div>
               <div className="flex items-center gap-1.5 px-2 py-1 bg-[#3CB371]/10 rounded border border-[#3CB371]/30">
                 <div className="w-2 h-2 rounded-full bg-[#3CB371]" />
@@ -132,12 +132,12 @@ export function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#FFB347]/5 border border-[#FFB347]/10">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#2B1A0A]/5 border border-[#2B1A0A]/10">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#FFB347]" />
+                    <div className="w-3 h-3 rounded-full bg-[#2B1A0A]" />
                     <span className="text-xs font-medium uppercase tracking-tight">Rotación</span>
                   </div>
-                  <span className="text-sm font-bold text-[#FFB347]">{stats.ROTATION} d</span>
+                  <span className="text-sm font-bold text-[#2B1A0A]">{stats.ROTATION} d</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-[#3CB371]/5 border border-[#3CB371]/10">
                   <div className="flex items-center gap-2">
