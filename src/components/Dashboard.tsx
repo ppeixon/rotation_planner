@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from "react";
@@ -245,17 +246,24 @@ export function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#ffc000]/20 border border-[#ffc000]/40">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#ffc000]/10 border border-[#ffc000]/20">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-[#ffc000]" />
-                    <span className="text-xs font-medium uppercase tracking-tight">Rotación + V.Salida</span>
+                    <span className="text-xs font-medium uppercase tracking-tight">Rotación</span>
                   </div>
-                  <span className="text-sm font-bold text-[#2B1A0A]">{stats.ROTATION + stats.TRAVEL_EXIT} d</span>
+                  <span className="text-sm font-bold text-[#2B1A0A]">{stats.ROTATION} d</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#ffc000]/10 border border-[#ffc000]/20">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#ffc000] opacity-70" />
+                    <span className="text-xs font-medium uppercase tracking-tight">V. Salida</span>
+                  </div>
+                  <span className="text-sm font-bold text-[#2B1A0A]">{stats.TRAVEL_EXIT} d</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-[#3CB371]/5 border border-[#3CB371]/10">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-[#3CB371]" />
-                    <span className="text-xs font-medium uppercase tracking-tight">Viaje Entrada</span>
+                    <span className="text-xs font-medium uppercase tracking-tight">V. Entrada</span>
                   </div>
                   <span className="text-sm font-bold text-[#3CB371]">{stats.TRAVEL_ENTRY} d</span>
                 </div>
@@ -371,3 +379,4 @@ export function Dashboard() {
     </div>
   );
 }
+
