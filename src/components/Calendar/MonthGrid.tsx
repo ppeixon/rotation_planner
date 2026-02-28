@@ -24,9 +24,9 @@ interface MonthGridProps {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  ROTATION: "bg-[#c6d9f1] text-[#2B1A0A]",
+  ROTATION: "bg-[#FFD8A8] text-[#2B1A0A]",
   TRAVEL: "bg-[#3CB371] text-white",
-  VACATION: "bg-[#BADCFF] text-blue-900",
+  VACATION: "bg-[#c6d9f1] text-blue-900",
   STANDBY: "bg-slate-200 text-slate-700",
   NORMAL: "bg-transparent",
 };
