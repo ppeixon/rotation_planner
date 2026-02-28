@@ -2,11 +2,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { doc, onSnapshot, collection } from "firebase/firestore";
+import { doc, onSnapshot, collection, writeBatch, query, where, getDocs } from "firebase/firestore";
 import { useFirestore, setDocumentNonBlocking } from "@/firebase";
 import { useAuth } from "./useAuth";
 import { DayEvent, UserSettings, DayType } from "@/lib/types";
-import { format, addDays, isBefore, startOfDay, differenceInDays } from "date-fns";
+import { format, addDays, isBefore, startOfDay, differenceInDays, parseISO } from "date-fns";
 
 export function useRotation() {
   const { user } = useAuth();
@@ -90,7 +90,6 @@ export function useRotation() {
     }, { merge: true });
 
     const totalDays = settings.generateMonthsAhead * 31;
-    // Empezamos un día antes para poder marcar el primer día de viaje (d-1)
     let current = addDays(startOfDay(startDate), -1);
     const endGeneration = addDays(current, totalDays + 2);
 
@@ -98,23 +97,18 @@ export function useRotation() {
       const dateKey = format(current, "yyyy-MM-dd");
       const existing = events[dateKey];
       
-      // Solo sobreescribimos si no hay nada o si lo que hay fue generado automáticamente
       if (!existing || existing.source === "GENERATED") {
         const diffInDays = differenceInDays(current, startDate);
-        // Ciclo de 56 días (28 trabajo + 28 descanso/viaje)
         const cycleDay = ((diffInDays % 56) + 56) % 56;
         
-        let targetType: DayType = "VACATION"; // Por defecto es VACATION
+        let targetType: DayType = "VACATION";
         
         if (cycleDay >= 0 && cycleDay < 28) {
-          // Bloque de rotación (28 días)
           targetType = "ROTATION";
         } else if (cycleDay === 55) {
-          // Día d-1 (el día anterior al inicio de la rotación)
           targetType = "TRAVEL";
         }
 
-        // Siempre actualizamos si ha cambiado o si no existía, para asegurar el llenado de vacaciones
         if (!existing || existing.dayType !== targetType) {
           const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
           setDocumentNonBlocking(dayRef, {
@@ -133,5 +127,63 @@ export function useRotation() {
     }
   };
 
-  return { settings, events, loading, updateDay, generateRotations };
+  const resyncChain = async (anchorDate: string, newDuration: number, type: DayType) => {
+    if (!user || !db || !settings) return;
+
+    const start = startOfDay(parseISO(anchorDate));
+    const nextCycleStart = addDays(start, newDuration);
+    
+    // 1. Update the first block (the one being edited)
+    for (let i = 0; i < newDuration; i++) {
+      const current = addDays(start, i);
+      const dateKey = format(current, "yyyy-MM-dd");
+      const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
+      
+      setDocumentNonBlocking(dayRef, {
+        id: dateKey,
+        dateKey,
+        dayType: type,
+        source: "GENERATED",
+        updatedAt: Date.now(),
+        updatedBy: user.uid,
+        userId: user.uid
+      }, { merge: true });
+    }
+
+    // 2. Determine what follows. If we just finished a ROTATION of X days, 
+    // we start a normal 28/28 cycle starting with VACATION.
+    // So the "new" start date for the 28/28 logic will be the start of the *next* block.
+    // But our generateRotations expects the start of a ROTATION block.
+    // If we just edited a ROTATION, the next block is VACATION (28 days).
+    // So the next ROTATION starts in 28 days.
+    
+    let effectiveRotationStart: Date;
+    if (type === "ROTATION") {
+      effectiveRotationStart = addDays(nextCycleStart, 28); // Next rotation starts after 28 days of vacation
+      
+      // Fill the vacation gap manually
+      for (let i = 0; i < 28; i++) {
+        const current = addDays(nextCycleStart, i);
+        const dateKey = format(current, "yyyy-MM-dd");
+        const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
+        setDocumentNonBlocking(dayRef, {
+          id: dateKey,
+          dateKey,
+          dayType: "VACATION",
+          source: "GENERATED",
+          updatedAt: Date.now(),
+          updatedBy: user.uid,
+          userId: user.uid
+        }, { merge: true });
+      }
+    } else {
+      // If we just edited VACATION, the next block is ROTATION
+      effectiveRotationStart = nextCycleStart;
+    }
+
+    // Call standard generator from the new calculated rotation start
+    generateRotations(effectiveRotationStart);
+  };
+
+  return { settings, events, loading, updateDay, generateRotations, resyncChain };
 }

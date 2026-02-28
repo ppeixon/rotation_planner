@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { useRotation } from "@/hooks/useRotation";
 import { MonthGrid } from "./Calendar/MonthGrid";
 import { DayEditor } from "./Calendar/DayEditor";
+import { BlockEditor } from "./Calendar/BlockEditor";
 import { RotationGenerator } from "./RotationGenerator";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,7 +19,10 @@ import {
   endOfYear,
   addYears,
   subYears,
-  startOfMonth
+  startOfMonth,
+  parseISO,
+  subDays,
+  isSameDay
 } from "date-fns";
 import { 
   ChevronLeft, 
@@ -30,13 +34,22 @@ import {
   BarChart3
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { DayType } from "@/lib/types";
 
 export function Dashboard() {
   const { user, logout } = useAuth();
-  const { events, loading, updateDay, generateRotations } = useRotation();
+  const { events, loading, updateDay, generateRotations, resyncChain } = useRotation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [view, setView] = useState<"annual" | "monthly">("annual");
+
+  // State for Block Editor
+  const [blockEditorOpen, setBlockEditorOpen] = useState(false);
+  const [blockData, setBlockData] = useState<{
+    startDate: string;
+    duration: number;
+    type: DayType;
+  } | null>(null);
 
   if (loading) {
     return (
@@ -48,11 +61,66 @@ export function Dashboard() {
   }
 
   const handleDayClick = (date: Date) => {
+    const dateKey = format(date, "yyyy-MM-dd");
+    const event = events[dateKey];
+
     if (view === "annual") {
-      setCurrentDate(date);
-      setView("monthly");
+      if (event && (event.dayType === "ROTATION" || event.dayType === "VACATION")) {
+        // Find the start of the block
+        let start = date;
+        let duration = 1;
+        const targetType = event.dayType;
+
+        // Iterate backward to find the first day of the block
+        let checkDate = subDays(date, 1);
+        while (events[format(checkDate, "yyyy-MM-dd")]?.dayType === targetType) {
+          start = checkDate;
+          duration++;
+          checkDate = subDays(checkDate, 1);
+        }
+
+        // Iterate forward to find the full current duration
+        let forwardDate = date;
+        while (events[format(addMonths(forwardDate, 0), "yyyy-MM-dd")] === undefined) break; // safety
+        
+        // Simplified: let's just find the start and then the user can decide duration
+        // To accurately find duration we'd need to go forward too
+        let endCheckDate = format(date, "yyyy-MM-dd");
+        let forwardDays = 0;
+        let current = date;
+        while (true) {
+           current = addYears(current, 0); // just to satisfy types if needed
+           const next = addMonths(current, 0); // dummy
+           const d = format(addYears(current, 0), "yyyy-MM-dd"); // dummy
+           
+           // Correct forward search
+           const nextDay = addYears(start, 0); // No, simpler:
+           break;
+        }
+        
+        // Re-calculating duration accurately
+        let finalDuration = 0;
+        let scanDate = start;
+        while (events[format(scanDate, "yyyy-MM-dd")]?.dayType === targetType) {
+          finalDuration++;
+          scanDate = addMonths(scanDate, 0); // dummy
+          const actualNext = new Date(scanDate);
+          actualNext.setDate(actualNext.getDate() + 1);
+          scanDate = actualNext;
+        }
+
+        setBlockData({
+          startDate: format(start, "yyyy-MM-dd"),
+          duration: finalDuration,
+          type: targetType
+        });
+        setBlockEditorOpen(true);
+      } else {
+        setCurrentDate(date);
+        setView("monthly");
+      }
     } else {
-      setEditingDate(format(date, "yyyy-MM-dd"));
+      setEditingDate(dateKey);
     }
   };
 
@@ -98,7 +166,6 @@ export function Dashboard() {
             <h1 className="font-headline font-bold text-lg sm:hidden">ARP</h1>
           </div>
 
-          {/* View Toggler in Header */}
           <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="hidden md:flex w-auto">
             <TabsList className="grid grid-cols-2 h-9 w-[200px]">
               <TabsTrigger value="monthly" className="gap-2">
@@ -210,7 +277,6 @@ export function Dashboard() {
           {/* Calendar Area */}
           <section className="flex-1 space-y-6">
             <div className="flex items-center justify-between gap-4">
-              {/* Mobile View Toggler */}
               <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="md:hidden w-full">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="monthly">Mes</TabsTrigger>
@@ -263,6 +329,15 @@ export function Dashboard() {
         event={editingDate ? events[editingDate] : undefined}
         onClose={() => setEditingDate(null)}
         onSave={updateDay}
+      />
+
+      <BlockEditor
+        isOpen={blockEditorOpen}
+        onClose={() => setBlockEditorOpen(false)}
+        startDate={blockData?.startDate || null}
+        currentDuration={blockData?.duration || 0}
+        type={blockData?.type || "ROTATION"}
+        onSave={resyncChain}
       />
       
       <footer className="py-6 border-t bg-muted/20 mt-12">
