@@ -226,7 +226,10 @@ export function Dashboard() {
         <div className="flex flex-col md:flex-row gap-8">
           
           <aside className="w-full md:w-80 space-y-6 shrink-0">
-            <RotationGenerator onGenerate={generateRotations} />
+            <RotationGenerator 
+              onGenerate={generateRotations} 
+              defaultDate={format(startOfYear(currentDate), "yyyy-MM-dd")}
+            />
             
             <Card className="shadow-sm border-muted">
               <CardHeader className="pb-3">

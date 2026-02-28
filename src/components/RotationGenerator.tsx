@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
@@ -19,11 +20,19 @@ import { format } from "date-fns";
 interface RotationGeneratorProps {
   onGenerate: (startDate: Date) => void;
   isGenerating?: boolean;
+  defaultDate?: string;
 }
 
-export function RotationGenerator({ onGenerate, isGenerating }: RotationGeneratorProps) {
-  const [startDate, setStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
+export function RotationGenerator({ onGenerate, isGenerating, defaultDate }: RotationGeneratorProps) {
+  const [startDate, setStartDate] = useState(defaultDate || format(new Date(), "yyyy-MM-dd"));
   const [open, setOpen] = useState(false);
+
+  // Sincronizar la fecha por defecto cuando se abre el diálogo o cambia el año en el Dashboard
+  useEffect(() => {
+    if (open && defaultDate) {
+      setStartDate(defaultDate);
+    }
+  }, [open, defaultDate]);
 
   const handleGenerate = () => {
     onGenerate(new Date(startDate));
