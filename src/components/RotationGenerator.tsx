@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -61,7 +62,7 @@ export function RotationGenerator({ onGenerate, isGenerating, defaultDate }: Rot
             Configurar Inicio de Año
           </DialogTitle>
           <DialogDescription className="text-sm">
-            Define cómo comienza tu calendario y el sistema generará el ciclo automático: Vacaciones (26+1) y Rotación (28+1).
+            Define cómo comienza tu calendario y el sistema generará el ciclo automático de 56 días.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
@@ -83,10 +84,10 @@ export function RotationGenerator({ onGenerate, isGenerating, defaultDate }: Rot
                 <SelectValue placeholder="Selecciona estado inicial" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ROTATION">Rotación (28 días)</SelectItem>
-                <SelectItem value="TRAVEL_EXIT">Viaje de Salida (Amarillo)</SelectItem>
                 <SelectItem value="VACATION">Vacaciones (26 días)</SelectItem>
                 <SelectItem value="TRAVEL_ENTRY">Viaje de Entrada (Verde)</SelectItem>
+                <SelectItem value="ROTATION">Rotación (28 días)</SelectItem>
+                <SelectItem value="TRAVEL_EXIT">Viaje de Salida (Amarillo)</SelectItem>
                 <SelectItem value="STANDBY">Standby</SelectItem>
               </SelectContent>
             </Select>
