@@ -16,6 +16,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const ALLOWED_EMAIL = "pepe.galan.chiner@gmail.com";
+const REQUIRED_PASSWORD = "jogachi";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const auth = useFirebaseAuth();
@@ -47,30 +48,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
+    if (pass !== REQUIRED_PASSWORD) {
+      toast({
+        variant: "destructive",
+        title: "Contraseña incorrecta",
+        description: "La contraseña introducida no es válida para el administrador."
+      });
+      return;
+    }
+
     try {
-      // Intentar iniciar sesión
       await signInWithEmailAndPassword(auth, cleanEmail, pass);
     } catch (error: any) {
-      // Si el usuario no existe, lo creamos (solo para el email permitido)
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         try {
           await createUserWithEmailAndPassword(auth, cleanEmail, pass);
           toast({
             title: "Bienvenido",
-            description: "Tu cuenta ha sido configurada correctamente."
+            description: "Tu cuenta de administrador ha sido configurada correctamente."
           });
         } catch (regError: any) {
           toast({
             variant: "destructive",
-            title: "Error de acceso",
-            description: "No se pudo verificar la cuenta. Comprueba los datos."
+            title: "Error de configuración",
+            description: "No se pudo crear el perfil de administrador en el sistema."
           });
         }
       } else {
         toast({
           variant: "destructive",
           title: "Error de acceso",
-          description: "Credenciales incorrectas o problema de conexión."
+          description: "Hubo un problema al conectar con el servicio de seguridad."
         });
       }
     }

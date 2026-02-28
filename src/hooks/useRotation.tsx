@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { doc, setDoc, onSnapshot, collection, serverTimestamp } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
+import { doc, onSnapshot, collection } from "firebase/firestore";
+import { useFirestore, setDocumentNonBlocking } from "@/firebase";
 import { useAuth } from "./useAuth";
 import { DayEvent, UserSettings } from "@/lib/types";
 import { format, addDays, isBefore, startOfDay } from "date-fns";
@@ -23,7 +23,6 @@ export function useRotation() {
       return;
     }
 
-    // Siguiendo la estructura de backend.json: /users/{userId}/settings/profile
     const settingsRef = doc(db, "users", user.uid, "settings", "profile");
     const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -35,11 +34,10 @@ export function useRotation() {
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           updatedAt: Date.now(),
         };
-        setDoc(settingsRef, defaultSettings, { merge: true });
+        setDocumentNonBlocking(settingsRef, defaultSettings, { merge: true });
       }
     });
 
-    // Siguiendo la estructura de backend.json: /users/{userId}/dayEvents/{dayEventId}
     const eventsRef = collection(db, "users", user.uid, "dayEvents");
     const unsubEvents = onSnapshot(eventsRef, (querySnap) => {
       const newEvents: Record<string, DayEvent> = {};
@@ -56,7 +54,7 @@ export function useRotation() {
     };
   }, [user, db]);
 
-  const updateDay = async (dateKey: string, partial: Partial<DayEvent>) => {
+  const updateDay = (dateKey: string, partial: Partial<DayEvent>) => {
     if (!user || !db) return;
     const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
     const existing = events[dateKey];
@@ -72,14 +70,14 @@ export function useRotation() {
       updatedBy: user.uid,
     };
     
-    setDoc(dayRef, newEvent, { merge: true });
+    setDocumentNonBlocking(dayRef, newEvent, { merge: true });
   };
 
-  const generateRotations = async (startDate: Date) => {
+  const generateRotations = (startDate: Date) => {
     if (!user || !settings || !db) return;
     
     const settingsRef = doc(db, "users", user.uid, "settings", "profile");
-    setDoc(settingsRef, {
+    setDocumentNonBlocking(settingsRef, {
       ...settings,
       startRotationDate: startDate.getTime(),
       updatedAt: Date.now()
@@ -95,11 +93,11 @@ export function useRotation() {
       
       if (!existing || existing.source === "GENERATED") {
         const diffInDays = Math.floor((current.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const cycleDay = diffInDays % 56; // Ciclo de 28 ON / 28 OFF
+        const cycleDay = diffInDays % 56;
         
         if (cycleDay < 28) {
            const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
-           setDoc(dayRef, {
+           setDocumentNonBlocking(dayRef, {
              dateKey,
              dayType: "ROTATION",
              flightTicketPurchased: false,
