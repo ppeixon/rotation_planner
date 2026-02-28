@@ -64,23 +64,62 @@ export function Dashboard() {
     const event = events[dateKey];
 
     if (view === "annual") {
+      // Solo editamos bloques de Rotación o Vacaciones (incluyendo sus viajes asociados)
       if (event && (event.dayType === "ROTATION" || event.dayType === "VACATION" || event.dayType === "TRAVEL_ENTRY" || event.dayType === "TRAVEL_EXIT")) {
         let start = date;
-        let targetType = event.dayType;
+        
+        // Si clicamos en un viaje, identificamos a qué bloque pertenece
+        const targetType = (event.dayType === "TRAVEL_ENTRY") ? "VACATION" : 
+                         (event.dayType === "TRAVEL_EXIT") ? "ROTATION" : 
+                         event.dayType;
 
-        // Búsqueda del inicio del bloque
+        // Búsqueda del inicio del bloque real (incluyendo el viaje inicial si lo hubiera o retrocediendo en el mismo tipo)
         let checkDate = subDays(date, 1);
-        while (events[format(checkDate, "yyyy-MM-dd")]?.dayType === targetType) {
-          start = checkDate;
-          checkDate = subDays(checkDate, 1);
+        while (true) {
+          const prevEvent = events[format(checkDate, "yyyy-MM-dd")];
+          if (!prevEvent) break;
+          
+          if (targetType === "VACATION") {
+            if (prevEvent.dayType === "VACATION") {
+              start = checkDate;
+              checkDate = subDays(checkDate, 1);
+            } else {
+              break;
+            }
+          } else if (targetType === "ROTATION") {
+            if (prevEvent.dayType === "ROTATION") {
+              start = checkDate;
+              checkDate = subDays(checkDate, 1);
+            } else {
+              break;
+            }
+          }
         }
 
-        // Calcular duración total del bloque detectado
+        // Calcular duración total sumando el tipo base + el viaje final correspondiente
         let finalDuration = 0;
         let scanDate = start;
-        while (events[format(scanDate, "yyyy-MM-dd")]?.dayType === targetType) {
-          finalDuration++;
-          scanDate = addDays(scanDate, 1);
+        while (true) {
+          const currentEvent = events[format(scanDate, "yyyy-MM-dd")];
+          if (!currentEvent) break;
+          
+          if (targetType === "VACATION") {
+            if (currentEvent.dayType === "VACATION" || currentEvent.dayType === "TRAVEL_ENTRY") {
+              finalDuration++;
+              scanDate = addDays(scanDate, 1);
+              if (currentEvent.dayType === "TRAVEL_ENTRY") break; // Fin del bloque vacaciones
+            } else {
+              break;
+            }
+          } else if (targetType === "ROTATION") {
+            if (currentEvent.dayType === "ROTATION" || currentEvent.dayType === "TRAVEL_EXIT") {
+              finalDuration++;
+              scanDate = addDays(scanDate, 1);
+              if (currentEvent.dayType === "TRAVEL_EXIT") break; // Fin del bloque rotación
+            } else {
+              break;
+            }
+          }
         }
 
         setBlockData({
@@ -123,8 +162,7 @@ export function Dashboard() {
   
   const rawStats = Object.entries(events).reduce((acc, [dateKey, event]) => {
     if (dateKey.startsWith(periodPrefix)) {
-      const type = event.dayType === 'TRAVEL' ? 'TRAVEL_ENTRY' : event.dayType;
-      acc[type] = (acc[type] || 0) + 1;
+      acc[event.dayType] = (acc[event.dayType] || 0) + 1;
     }
     return acc;
   }, {} as Record<string, number>);
@@ -144,10 +182,10 @@ export function Dashboard() {
                       (rawStats.VACATION || 0);
 
   const stats = {
-    ROTATION: rawStats.ROTATION || 0,
-    TRAVEL_ENTRY: rawStats.TRAVEL_ENTRY || 0,
-    TRAVEL_EXIT: rawStats.TRAVEL_EXIT || 0,
     VACATION: rawStats.VACATION || 0,
+    TRAVEL_ENTRY: rawStats.TRAVEL_ENTRY || 0,
+    ROTATION: rawStats.ROTATION || 0,
+    TRAVEL_EXIT: rawStats.TRAVEL_EXIT || 0,
     STANDBY: Math.max(0, totalInPeriod - occupiedDays)
   };
 
