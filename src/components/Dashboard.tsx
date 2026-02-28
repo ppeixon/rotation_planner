@@ -102,9 +102,9 @@ export function Dashboard() {
                 <div className="w-2 h-2 rounded-full bg-[#3CB371]" />
                 <span className="text-[10px] font-bold text-[#3CB371]">VIAJE</span>
               </div>
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#1E90FF]/10 rounded border border-[#1E90FF]/30">
-                <div className="w-2 h-2 rounded-full bg-[#1E90FF]" />
-                <span className="text-[10px] font-bold text-[#1E90FF]">VACACIONES</span>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#7EB6FF]/10 rounded border border-[#7EB6FF]/30">
+                <div className="w-2 h-2 rounded-full bg-[#7EB6FF]" />
+                <span className="text-[10px] font-bold text-[#7EB6FF]">VACACIONES</span>
               </div>
             </div>
 
@@ -146,12 +146,12 @@ export function Dashboard() {
                   </div>
                   <span className="text-sm font-bold text-[#3CB371]">{stats.TRAVEL} d</span>
                 </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#1E90FF]/5 border border-[#1E90FF]/10">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#7EB6FF]/5 border border-[#7EB6FF]/10">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#1E90FF]" />
+                    <div className="w-3 h-3 rounded-full bg-[#7EB6FF]" />
                     <span className="text-xs font-medium uppercase tracking-tight">Vacaciones</span>
                   </div>
-                  <span className="text-sm font-bold text-[#1E90FF]">{stats.VACATION} d</span>
+                  <span className="text-sm font-bold text-[#7EB6FF]">{stats.VACATION} d</span>
                 </div>
               </CardContent>
             </Card>
