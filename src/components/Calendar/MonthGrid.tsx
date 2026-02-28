@@ -55,6 +55,10 @@ export function MonthGrid({ monthDate, events, mini = false, onDayClick }: Month
           const isCurrentMonth = isSameMonth(day, monthDate);
           const isTodayDay = isToday(day);
 
+          // Soporte para legado "TRAVEL" mapeado a entrada
+          const dayType = event?.dayType === 'TRAVEL' ? 'TRAVEL_ENTRY' : event?.dayType;
+          const colorClass = event && isCurrentMonth && dayType ? TYPE_COLORS[dayType] : "bg-background";
+
           return (
             <div
               key={dateKey}
@@ -63,7 +67,7 @@ export function MonthGrid({ monthDate, events, mini = false, onDayClick }: Month
                 "relative bg-background hover:bg-accent/10 transition-colors cursor-pointer flex flex-col items-center justify-center",
                 !isCurrentMonth && "bg-muted/30 text-muted-foreground opacity-50",
                 mini ? "aspect-square py-1" : "aspect-square sm:aspect-auto sm:min-h-[80px] p-1",
-                event && isCurrentMonth ? TYPE_COLORS[event.dayType] : "bg-background"
+                colorClass
               )}
             >
               <span className={cn(
@@ -82,7 +86,7 @@ export function MonthGrid({ monthDate, events, mini = false, onDayClick }: Month
 
               {mini && isCurrentMonth && event && (
                 <div className="absolute top-0 right-0 p-0.5">
-                  {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY") ? "bg-current" : "bg-white")} />}
+                  {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY" || event.dayType === "TRAVEL_ENTRY") ? "bg-current" : "bg-white")} />}
                 </div>
               )}
             </div>

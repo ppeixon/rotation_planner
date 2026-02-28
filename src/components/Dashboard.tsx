@@ -123,10 +123,11 @@ export function Dashboard() {
   
   const rawStats = Object.entries(events).reduce((acc, [dateKey, event]) => {
     if (dateKey.startsWith(periodPrefix)) {
-      acc[event.dayType] = (acc[event.dayType] || 0) + 1;
+      const type = event.dayType === 'TRAVEL' ? 'TRAVEL_ENTRY' : event.dayType;
+      acc[type] = (acc[type] || 0) + 1;
     }
     return acc;
-  }, { ROTATION: 0, TRAVEL_ENTRY: 0, TRAVEL_EXIT: 0, VACATION: 0, STANDBY: 0, NORMAL: 0 } as Record<string, number>);
+  }, {} as Record<string, number>);
 
   let totalInPeriod = 0;
   if (view === "monthly") {
@@ -137,9 +138,17 @@ export function Dashboard() {
     totalInPeriod = isLeap ? 366 : 365;
   }
 
+  const occupiedDays = (rawStats.ROTATION || 0) + 
+                      (rawStats.TRAVEL_ENTRY || 0) + 
+                      (rawStats.TRAVEL_EXIT || 0) + 
+                      (rawStats.VACATION || 0);
+
   const stats = {
-    ...rawStats,
-    STANDBY: Math.max(0, totalInPeriod - (rawStats.ROTATION + rawStats.TRAVEL_ENTRY + rawStats.TRAVEL_EXIT + rawStats.VACATION))
+    ROTATION: rawStats.ROTATION || 0,
+    TRAVEL_ENTRY: rawStats.TRAVEL_ENTRY || 0,
+    TRAVEL_EXIT: rawStats.TRAVEL_EXIT || 0,
+    VACATION: rawStats.VACATION || 0,
+    STANDBY: Math.max(0, totalInPeriod - occupiedDays)
   };
 
   return (
@@ -202,7 +211,7 @@ export function Dashboard() {
           <aside className="w-full md:w-80 space-y-6 shrink-0">
             <RotationGenerator 
               onGenerate={generateRotations} 
-              defaultDate={format(startOfYear(currentDate), "yyyy-MM-dd")}
+              defaultDate={format(startOfYear(currentDate), "yyyy-01-01")}
             />
             
             <Card className="shadow-sm border-muted">
