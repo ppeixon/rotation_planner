@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -5,7 +6,7 @@ import { doc, onSnapshot, collection, writeBatch, query, where, getDocs } from "
 import { useFirestore, setDocumentNonBlocking } from "@/firebase";
 import { useAuth } from "./useAuth";
 import { DayEvent, UserSettings, DayType } from "@/lib/types";
-import { format, addDays, isBefore, startOfDay, differenceInDays, parseISO, endOfYear, isSameYear } from "date-fns";
+import { format, addDays, isBefore, startOfDay, differenceInDays, parseISO, endOfYear, isSameYear, subDays } from "date-fns";
 
 export function useRotation() {
   const { user } = useAuth();
@@ -67,7 +68,7 @@ export function useRotation() {
       flightTicketPurchased: partial.flightTicketPurchased ?? existing?.flightTicketPurchased ?? false,
       flightInfo: partial.flightInfo ?? existing?.flightInfo ?? "",
       notes: partial.notes ?? existing?.notes ?? "",
-      source: "MANUAL",
+      source: partial.source ?? "MANUAL",
       updatedAt: Date.now(),
       updatedBy: user.uid,
       userId: user.uid,
@@ -79,7 +80,6 @@ export function useRotation() {
   const generateRotations = (startDate: Date) => {
     if (!user || !settings || !db) return;
     
-    // Solo actualizamos la fecha de referencia en settings
     const settingsRef = doc(db, "users", user.uid, "settings", "profile");
     setDocumentNonBlocking(settingsRef, {
       ...settings,
@@ -89,7 +89,22 @@ export function useRotation() {
       id: "profile"
     }, { merge: true });
 
-    // Definimos el límite: fin del año de la fecha de inicio
+    // El día anterior al inicio de la rotación debe ser TRAVEL (si es el mismo año)
+    const dayBeforeStart = subDays(startDate, 1);
+    if (isSameYear(dayBeforeStart, startDate)) {
+      const dbKey = format(dayBeforeStart, "yyyy-MM-dd");
+      const dayRef = doc(db, "users", user.uid, "dayEvents", dbKey);
+      setDocumentNonBlocking(dayRef, {
+        id: dbKey,
+        dateKey: dbKey,
+        dayType: "TRAVEL",
+        source: "GENERATED",
+        updatedAt: Date.now(),
+        updatedBy: user.uid,
+        userId: user.uid
+      }, { merge: true });
+    }
+
     const endGeneration = endOfYear(startDate);
     let current = startOfDay(startDate);
 
@@ -97,7 +112,6 @@ export function useRotation() {
       const dateKey = format(current, "yyyy-MM-dd");
       const existing = events[dateKey];
       
-      // Solo modificar si es generado o no existe, y SIEMPRE dentro del mismo año
       if (isSameYear(current, startDate)) {
         if (!existing || existing.source === "GENERATED") {
           const diffInDays = differenceInDays(current, startDate);
@@ -108,6 +122,7 @@ export function useRotation() {
           if (cycleDay >= 0 && cycleDay < 28) {
             targetType = "ROTATION";
           } else if (cycleDay === 55) {
+            // Este es el día anterior al siguiente bloque de rotación en el ciclo
             targetType = "TRAVEL";
           }
 
@@ -117,7 +132,7 @@ export function useRotation() {
               id: dateKey,
               dateKey,
               dayType: targetType,
-              flightTicketPurchased: false,
+              flightTicketPurchased: existing?.flightTicketPurchased ?? false,
               source: "GENERATED",
               updatedAt: Date.now(),
               updatedBy: user.uid,
@@ -134,12 +149,28 @@ export function useRotation() {
     if (!user || !db || !settings) return;
 
     const start = startOfDay(parseISO(anchorDate));
-    const nextCycleStart = addDays(start, newDuration);
     
+    // Si el bloque editado es ROTATION, el día anterior debe ser TRAVEL
+    if (type === "ROTATION") {
+      const dayBefore = subDays(start, 1);
+      if (isSameYear(dayBefore, start)) {
+        const dbKey = format(dayBefore, "yyyy-MM-dd");
+        const dayRef = doc(db, "users", user.uid, "dayEvents", dbKey);
+        setDocumentNonBlocking(dayRef, {
+          id: dbKey,
+          dateKey: dbKey,
+          dayType: "TRAVEL",
+          source: "GENERATED",
+          updatedAt: Date.now(),
+          updatedBy: user.uid,
+          userId: user.uid
+        }, { merge: true });
+      }
+    }
+
     // 1. Actualizar el bloque editado
     for (let i = 0; i < newDuration; i++) {
       const current = addDays(start, i);
-      // Mantener la restricción de año
       if (!isSameYear(current, start)) break;
 
       const dateKey = format(current, "yyyy-MM-dd");
@@ -156,12 +187,14 @@ export function useRotation() {
       }, { merge: true });
     }
 
-    // 2. Determinar qué sigue (Vacaciones o Rotación)
+    // 2. Determinar qué sigue
+    const nextCycleStart = addDays(start, newDuration);
     let effectiveRotationStart: Date;
+    
     if (type === "ROTATION") {
+      // Si acabamos de terminar una rotación, la siguiente empieza tras 28 días de vacaciones
       effectiveRotationStart = addDays(nextCycleStart, 28); 
       
-      // Rellenar el hueco de vacaciones hasta la próxima rotación, respetando el año
       for (let i = 0; i < 28; i++) {
         const current = addDays(nextCycleStart, i);
         if (!isSameYear(current, start)) break;
@@ -179,10 +212,11 @@ export function useRotation() {
         }, { merge: true });
       }
     } else {
+      // Si acabamos de terminar vacaciones, la rotación empieza inmediatamente
       effectiveRotationStart = nextCycleStart;
     }
 
-    // Llamar al generador estándar que ahora está limitado al fin de año
+    // El generador se encargará de poner el TRAVEL antes de la siguiente rotación
     generateRotations(effectiveRotationStart);
   };
 
