@@ -1,4 +1,4 @@
-export type DayType = "ROTATION" | "TRAVEL" | "VACATION" | "NORMAL";
+export type DayType = "ROTATION" | "TRAVEL" | "VACATION" | "STANDBY" | "NORMAL";
 
 export interface DayEvent {
   id: string; // YYYY-MM-DD

@@ -77,7 +77,7 @@ export function Dashboard() {
       acc[event.dayType] = (acc[event.dayType] || 0) + 1;
     }
     return acc;
-  }, { ROTATION: 0, TRAVEL: 0, VACATION: 0, NORMAL: 0 } as Record<string, number>);
+  }, { ROTATION: 0, TRAVEL: 0, VACATION: 0, STANDBY: 0, NORMAL: 0 } as Record<string, number>);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-body">
@@ -93,7 +93,7 @@ export function Dashboard() {
           </div>
           
           <div className="flex items-center gap-2">
-            <div className="hidden md:flex items-center gap-2 mr-4">
+            <div className="hidden lg:flex items-center gap-2 mr-4">
               <div className="flex items-center gap-1.5 px-2 py-1 bg-[#FFD8A8] rounded border border-[#FFD8A8]/30">
                 <div className="w-2 h-2 rounded-full bg-[#2B1A0A]" />
                 <span className="text-[10px] font-bold text-[#2B1A0A]">ROTACIÓN</span>
@@ -105,6 +105,10 @@ export function Dashboard() {
               <div className="flex items-center gap-1.5 px-2 py-1 bg-[#BADCFF]/30 rounded border border-[#BADCFF]/60">
                 <div className="w-2 h-2 rounded-full bg-[#BADCFF]" />
                 <span className="text-[10px] font-bold text-blue-900">VACACIONES</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-200 rounded border border-slate-300">
+                <div className="w-2 h-2 rounded-full bg-slate-400" />
+                <span className="text-[10px] font-bold text-slate-700">STANDBY</span>
               </div>
             </div>
 
@@ -152,6 +156,13 @@ export function Dashboard() {
                     <span className="text-xs font-medium uppercase tracking-tight">Vacaciones</span>
                   </div>
                   <span className="text-sm font-bold text-blue-900">{stats.VACATION} d</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-100 border border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-slate-300" />
+                    <span className="text-xs font-medium uppercase tracking-tight">Standby</span>
+                  </div>
+                  <span className="text-sm font-bold text-slate-700">{stats.STANDBY} d</span>
                 </div>
               </CardContent>
             </Card>

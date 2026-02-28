@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { DayEvent, DayType } from "@/lib/types";
 import { format, parseISO } from "date-fns";
-import { Plane, Calendar as CalendarIcon, Briefcase, Sun, StickyNote } from "lucide-react";
+import { Plane, Calendar as CalendarIcon, Briefcase, Sun, StickyNote, HelpCircle } from "lucide-react";
 
 interface DayEditorProps {
   date: string | null;
@@ -91,6 +91,13 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
                 </Label>
               </div>
               <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
+                <RadioGroupItem value="STANDBY" id="standby" />
+                <Label htmlFor="standby" className="flex items-center gap-2 cursor-pointer">
+                  <div className="w-3 h-3 rounded-full bg-slate-200" />
+                  Standby
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
                 <RadioGroupItem value="NORMAL" id="normal" />
                 <Label htmlFor="normal" className="flex items-center gap-2 cursor-pointer">
                   <div className="w-3 h-3 rounded-full bg-slate-300" />
@@ -100,7 +107,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
             </RadioGroup>
           </div>
 
-          {(dayType === "TRAVEL" || dayType === "ROTATION") && (
+          {(dayType === "TRAVEL" || dayType === "ROTATION" || dayType === "STANDBY") && (
             <div className="space-y-4 border-t pt-4">
                <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

@@ -27,6 +27,7 @@ const TYPE_COLORS: Record<string, string> = {
   ROTATION: "bg-[#FFD8A8] text-[#2B1A0A]",
   TRAVEL: "bg-[#3CB371] text-white",
   VACATION: "bg-[#BADCFF] text-blue-900",
+  STANDBY: "bg-slate-200 text-slate-700",
   NORMAL: "bg-transparent",
 };
 
@@ -73,14 +74,14 @@ export function MonthGrid({ monthDate, events, mini = false, onDayClick }: Month
               
               {!mini && isCurrentMonth && event && (
                 <div className="absolute bottom-1 right-1 flex gap-0.5">
-                   {event.flightTicketPurchased && <Plane className={cn("w-3 h-3", (event.dayType === "VACATION" || event.dayType === "ROTATION") ? "text-[#2B1A0A] fill-[#2B1A0A]" : "text-white fill-white")} />}
-                   {event.notes && <StickyNote className={cn("w-3 h-3", (event.dayType === "VACATION" || event.dayType === "ROTATION") ? "text-[#2B1A0A] fill-[#2B1A0A]" : "text-white fill-white")} />}
+                   {event.flightTicketPurchased && <Plane className={cn("w-3 h-3", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "STANDBY") ? "text-current fill-current" : "text-white fill-white")} />}
+                   {event.notes && <StickyNote className={cn("w-3 h-3", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "STANDBY") ? "text-current fill-current" : "text-white fill-white")} />}
                 </div>
               )}
 
               {mini && isCurrentMonth && event && (
                 <div className="absolute top-0 right-0 p-0.5">
-                  {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full animate-pulse", (event.dayType === "VACATION" || event.dayType === "ROTATION") ? "bg-[#2B1A0A]" : "bg-white")} />}
+                  {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full animate-pulse", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "STANDBY") ? "bg-current" : "bg-white")} />}
                 </div>
               )}
             </div>
