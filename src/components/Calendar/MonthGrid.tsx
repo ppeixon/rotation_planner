@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -9,8 +10,7 @@ import {
   endOfWeek, 
   eachDayOfInterval, 
   isSameMonth, 
-  isToday,
-  isSameDay
+  isToday
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DayEvent } from "@/lib/types";
@@ -26,9 +26,9 @@ interface MonthGridProps {
 const TYPE_COLORS: Record<string, string> = {
   ROTATION: "bg-[#ffc000] text-[#2B1A0A]",
   TRAVEL_ENTRY: "bg-[#3CB371] text-white",
-  TRAVEL_EXIT: "bg-[#ffc000] text-[#2B1A0A]",
+  TRAVEL_EXIT: "bg-[#ffff00] text-[#2B1A0A]",
   VACATION: "bg-[#c6d9f1] text-[#1e3a8a]",
-  STANDBY: "bg-slate-200 text-slate-700",
+  STANDBY: "bg-[#e2e8f0] text-slate-700",
   NORMAL: "bg-transparent",
 };
 
@@ -67,7 +67,7 @@ export function MonthGrid({ monthDate, events, mini = false, onDayClick }: Month
               )}
             >
               <span className={cn(
-                "text-xs sm:text-sm font-medium",
+                "text-xs sm:text-sm font-medium z-10",
                 isTodayDay && "bg-accent text-accent-foreground rounded-full w-6 h-6 flex items-center justify-center"
               )}>
                 {format(day, "d")}
@@ -82,7 +82,7 @@ export function MonthGrid({ monthDate, events, mini = false, onDayClick }: Month
 
               {mini && isCurrentMonth && event && (
                 <div className="absolute top-0 right-0 p-0.5">
-                  {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full animate-pulse", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY") ? "bg-current" : "bg-white")} />}
+                  {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY") ? "bg-current" : "bg-white")} />}
                 </div>
               )}
             </div>

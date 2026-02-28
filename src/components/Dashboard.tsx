@@ -20,7 +20,6 @@ import {
   addYears,
   subYears,
   startOfMonth,
-  parseISO,
   subDays,
   addDays,
   getDaysInMonth
@@ -204,9 +203,13 @@ export function Dashboard() {
           
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
             <div className="hidden lg:flex items-center gap-2 mr-2">
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#ffc000] rounded border border-[#ffc000]/30">
-                <div className="w-2 h-2 rounded-full bg-[#2B1A0A]" />
-                <span className="text-[10px] font-bold text-[#2B1A0A]">ROTACIÓN / V. SALIDA</span>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#ffc000]/10 rounded border border-[#ffc000]/30">
+                <div className="w-2 h-2 rounded-full bg-[#ffc000]" />
+                <span className="text-[10px] font-bold text-[#ffc000]">ROTACIÓN</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#ffff00]/10 rounded border border-[#ffff00]/30">
+                <div className="w-2 h-2 rounded-full bg-[#ffff00]" />
+                <span className="text-[10px] font-bold text-[#b8860b]">V. SALIDA</span>
               </div>
               <div className="flex items-center gap-1.5 px-2 py-1 bg-[#3CB371]/10 rounded border border-[#3CB371]/30">
                 <div className="w-2 h-2 rounded-full bg-[#3CB371]" />
@@ -253,12 +256,12 @@ export function Dashboard() {
                   </div>
                   <span className="text-sm font-bold text-[#2B1A0A]">{stats.ROTATION} d</span>
                 </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#ffc000]/10 border border-[#ffc000]/20">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#ffff00]/10 border border-[#ffff00]/30">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#ffc000] opacity-70" />
+                    <div className="w-3 h-3 rounded-full bg-[#ffff00]" />
                     <span className="text-xs font-medium uppercase tracking-tight">V. Salida</span>
                   </div>
-                  <span className="text-sm font-bold text-[#2B1A0A]">{stats.TRAVEL_EXIT} d</span>
+                  <span className="text-sm font-bold text-[#b8860b]">{stats.TRAVEL_EXIT} d</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-[#3CB371]/5 border border-[#3CB371]/10">
                   <div className="flex items-center gap-2">
@@ -379,4 +382,3 @@ export function Dashboard() {
     </div>
   );
 }
-

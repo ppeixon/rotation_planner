@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -10,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { DayEvent, DayType } from "@/lib/types";
 import { format, parseISO } from "date-fns";
-import { Plane, Calendar as CalendarIcon, Briefcase, Sun, StickyNote, HelpCircle } from "lucide-react";
+import { Plane, Calendar as CalendarIcon, StickyNote } from "lucide-react";
 
 interface DayEditorProps {
   date: string | null;
@@ -79,7 +80,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
               <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
                 <RadioGroupItem value="TRAVEL_EXIT" id="travel_exit" />
                 <Label htmlFor="travel_exit" className="flex items-center gap-2 cursor-pointer">
-                  <div className="w-3 h-3 rounded-full bg-[#ffc000]" />
+                  <div className="w-3 h-3 rounded-full bg-[#ffff00]" />
                   Viaje Salida
                 </Label>
               </div>
@@ -100,7 +101,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
               <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
                 <RadioGroupItem value="STANDBY" id="standby" />
                 <Label htmlFor="standby" className="flex items-center gap-2 cursor-pointer">
-                  <div className="w-3 h-3 rounded-full bg-slate-200" />
+                  <div className="w-3 h-3 rounded-full bg-[#e2e8f0]" />
                   Standby
                 </Label>
               </div>
