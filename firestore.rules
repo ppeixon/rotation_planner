@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * DOCUMENTATION: RotationVista Security Model
+     * 
+     * Core Philosophy:
+     * This ruleset enforces a strict user-ownership model. Every piece of data in the system
+     * is physically and logically partitioned by the user's unique identifier (UID). 
+     *
+     * Data Structure:
+     * All application data is organized hierarchically under the path /users/{userId}.
+     * - /users/{userId}: Core profile data.
+     * - /users/{userId}/settings/profile: Personalized configuration (1:1 relationship).
+     * - /users/{userId}/dayEvents/{dayEventId}: Calendar-based rotation and travel events.
+     *
+     * Key Security Decisions:
+     * 1. Authorization Independence: By nesting all data under the userId, we verify access 
+     *    by simply comparing the path wildcard {userId} with the authenticated request.auth.uid.
+     * 2. No Public Access: All collections require authentication and ownership. There is 
+     *    no concept of public profiles or shared events in the current iteration.
+     * 3. Denormalization for Integrity: While authorization relies on the path, we enforce 
+     *    that internal document fields (like userId or id) match the path during creation 
+     *    to ensure data consistency.
+     * 4. Prototyping Flexibility: These rules strictly control WHO can access data but are 
+     *    lenient on the specific shape of the content to allow for rapid UI iteration.
+     */
+
+    // --- Helper Functions ---
+
+    /** Checks if the request is made by a signed-in user. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** Checks if the authenticated user's UID matches the provided userId. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** Checks if the user is the owner and the document already exists (for updates/deletes). */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    /** Verifies that a field in the incoming data remains unchanged. */
+    function isImmutable(field) {
+      return request.resource.data[field] == resource.data[field];
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for the core User profile. Allows users to manage their own profile.
+     * @path /users/{userId}
+     * @allow (create) if auth.uid matches {userId} and data.id matches {userId}.
+     * @deny (list) if the requester is not the owner of the specific path.
+     * @principle Ownership and Relational Integrity.
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && isImmutable('id');
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Rules for user-specific configuration. 1:1 relationship with User.
+       * @path /users/{userId}/settings/profile
+       * @allow (update) if owner and userId field is not modified.
+       * @deny (create) if the userId field in data does not match the URL path.
+       * @principle Path-based authorization and structural consistency.
+       */
+      match /settings/profile {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && isImmutable('userId');
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Rules for calendar events (Rotation, Travel, Vacation).
+       * @path /users/{userId}/dayEvents/{dayEventId}
+       * @allow (create) if owner and dayEventId matches the date key in the data.
+       * @deny (update) if attempting to change the owner (userId).
+       * @principle Scoped subcollection access.
+       */
+      match /dayEvents/{dayEventId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId && request.resource.data.id == dayEventId;
+        allow update: if isExistingOwner(userId) && isImmutable('userId') && isImmutable('id');
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+  }
+}

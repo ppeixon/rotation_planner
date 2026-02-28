@@ -1,0 +1,211 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the RotationVista application, storing basic profile information managed by an external authentication system like Firebase Authentication.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity. This corresponds to the Firebase Authentication User ID (UID)."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's primary email address, used for identification and potentially for communication.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's human-readable display name, which might be pulled from their authentication provider (e.g., Google)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was first created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user's profile information was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "createdAt"
+      ]
+    },
+    "UserSetting": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserSetting",
+      "type": "object",
+      "description": "Stores personalized configuration settings for a specific user, including parameters for the rotation generation logic.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserSetting entity. This ID should match the associated userId, representing a 1:1 relationship with the User entity. (Relationship: User 1:1 UserSetting)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User entity to whom these settings belong. (Relationship: User 1:1 UserSetting)"
+        },
+        "startRotationDate": {
+          "type": "string",
+          "description": "The initial date from which the 28-day rotation schedule logic is calculated.",
+          "format": "date"
+        },
+        "generateMonthsAhead": {
+          "type": "number",
+          "description": "The number of months into the future for which the rotation schedule should be automatically generated from the startRotationDate."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "The user's preferred timezone (e.g., 'Europe/Madrid'), used for accurate date and time display and calculations."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when these user settings were last modified.",
+          "format": "date-time"
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "Reference to the User who last updated these settings. (Relationship: User 1:N UserSetting)"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "startRotationDate",
+        "generateMonthsAhead",
+        "timezone"
+      ]
+    },
+    "DayEvent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DayEvent",
+      "type": "object",
+      "description": "Represents a specific event or status for a single calendar day, including rotation, travel, or vacation details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the DayEvent entity. This typically uses the 'YYYY-MM-DD' format and is unique within a user's collection of day events. (Relationship: User 1:N DayEvent)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User entity to whom this day event belongs. (Relationship: User 1:N DayEvent)"
+        },
+        "dateKey": {
+          "type": "string",
+          "description": "The specific calendar date for this event, formatted as 'YYYY-MM-DD'.",
+          "format": "date"
+        },
+        "dayType": {
+          "type": "string",
+          "description": "The categorizing type of event for this day. Valid values include 'ROTATION', 'TRAVEL', 'VACATION', or 'NORMAL'."
+        },
+        "flightTicketPurchased": {
+          "type": "boolean",
+          "description": "Indicates whether flight tickets for travel on this day have been purchased. Primarily relevant if dayType is 'TRAVEL'."
+        },
+        "flightInfo": {
+          "type": "string",
+          "description": "Optional free-form text field to store details about flights, such as flight numbers, schedules, or PNR (Passenger Name Record)."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional free-form, multi-line text field for any additional notes or reminders specific to this day."
+        },
+        "source": {
+          "type": "string",
+          "description": "Indicates whether this day event was manually created/edited ('MANUAL') by the user or automatically generated ('GENERATED') by the rotation logic."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this day event was initially recorded.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this day event was last modified.",
+          "format": "date-time"
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "Reference to the User who last updated this day event. (Relationship: User 1:N DayEvent)"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "dateKey",
+        "dayType",
+        "source",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores the core profile information for each user, directly linked to their Firebase Authentication UID. Authorization ensures only the authenticated user can access their own profile document.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to their Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/settings/profile",
+        "definition": {
+          "entityName": "UserSetting",
+          "schema": {
+            "$ref": "#/backend/entities/UserSetting"
+          },
+          "description": "Stores a single document containing personalized configuration settings (e.g., start rotation date, generation range) for a specific user. This is a 1:1 relationship with the User, identified by a fixed document ID 'profile'. Authorization is strictly limited to the owner user via path-based access.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to their Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/dayEvents/{dayEventId}",
+        "definition": {
+          "entityName": "DayEvent",
+          "schema": {
+            "$ref": "#/backend/entities/DayEvent"
+          },
+          "description": "Stores individual calendar events for a user, such as rotation, travel, or vacation days. Each document's ID (`dayEventId`) is formatted as 'YYYY-MM-DD'. Authorization ensures only the authenticated user can manage their own day events. Includes denormalized 'userId' field for consistency with path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to their Firebase Authentication UID."
+            },
+            {
+              "name": "dayEventId",
+              "description": "The specific date for the event, formatted as 'YYYY-MM-DD', serving as the document ID."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to be secure, scalable, and debuggable by strictly adhering to the core design principles and strategy mandates. All user-specific data is organized hierarchically under a top-level `/users/{userId}` collection, ensuring strong authorization independence and simplifying security rules.  Authorization for all collections (`users`, `settings`, `dayEvents`) is achieved by comparing `request.auth.uid` directly with the `{userId}` wildcard in the path. This eliminates the need for `get()` calls in security rules (Authorization Independence), making them atomic, performant, and easy to debug. Because all data is segregated by `userId` in the path, `list` operations are inherently secure (QAPs - Rules are not Filters). Clients must specify the `userId` in their queries, which can then be validated against `request.auth.uid`. This prevents clients from inadvertently or maliciously querying data belonging to other users. The structure consistently uses path-based ownership for all user-owned data, such as `/users/{userId}/settings/profile` for user settings and `/users/{userId}/dayEvents/{dayEventId}` for individual day events, reinforcing a clear and predictable access model. Each subcollection maintains a homogeneous security posture, meaning all documents within it share the same access requirements, further simplifying rule logic. Denormalization of authorization context is handled inherently by the path structure itself; the `userId` in the path provides all necessary context, negating the need to duplicate owner IDs within every document for authorization purposes, although `userId` is present in `DayEvent` and `UserSetting` schemas for data consistency and queryability. Standardized field names like `createdAt`, `updatedAt`, and `updatedBy` are included for auditability and invariants, supporting robust data integrity."
+  }
+}
