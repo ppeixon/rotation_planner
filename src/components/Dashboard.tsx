@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from "react";
@@ -65,12 +64,12 @@ export function Dashboard() {
     const event = events[dateKey];
 
     if (view === "annual") {
-      if (event && (event.dayType === "ROTATION" || event.dayType === "VACATION" || event.dayType === "TRAVEL")) {
+      if (event && (event.dayType === "ROTATION" || event.dayType === "VACATION" || event.dayType === "TRAVEL_ENTRY" || event.dayType === "TRAVEL_EXIT")) {
         let start = date;
         let targetType = event.dayType;
 
-        // Si es un día de viaje, detectamos si pertenece al final de un bloque de vacaciones
-        if (targetType === "TRAVEL") {
+        // Si es un día de viaje, detectamos si pertenece al final de un bloque
+        if (targetType === "TRAVEL_ENTRY") {
           const dayBefore = subDays(date, 1);
           if (events[format(dayBefore, "yyyy-MM-dd")]?.dayType === "VACATION") {
             targetType = "VACATION";
@@ -79,11 +78,16 @@ export function Dashboard() {
               start = checkDate;
               checkDate = subDays(checkDate, 1);
             }
-          } else {
-            // Si es un viaje suelto, vamos a la vista mensual
-            setCurrentDate(date);
-            setView("monthly");
-            return;
+          }
+        } else if (targetType === "TRAVEL_EXIT") {
+          const dayBefore = subDays(date, 1);
+          if (events[format(dayBefore, "yyyy-MM-dd")]?.dayType === "ROTATION") {
+            targetType = "ROTATION";
+            let checkDate = dayBefore;
+            while (events[format(checkDate, "yyyy-MM-dd")]?.dayType === "ROTATION") {
+              start = checkDate;
+              checkDate = subDays(checkDate, 1);
+            }
           }
         } else {
           // Búsqueda estándar del inicio del bloque
@@ -102,13 +106,15 @@ export function Dashboard() {
             finalDuration++;
             scanDate = addDays(scanDate, 1);
           }
+          if (events[format(scanDate, "yyyy-MM-dd")]?.dayType === "TRAVEL_EXIT") {
+            finalDuration++;
+          }
         } else {
-          // Bloque de vacaciones: días de vacaciones + día de viaje final
           while (events[format(scanDate, "yyyy-MM-dd")]?.dayType === "VACATION") {
             finalDuration++;
             scanDate = addDays(scanDate, 1);
           }
-          if (events[format(scanDate, "yyyy-MM-dd")]?.dayType === "TRAVEL") {
+          if (events[format(scanDate, "yyyy-MM-dd")]?.dayType === "TRAVEL_ENTRY") {
             finalDuration++;
           }
         }
@@ -116,7 +122,7 @@ export function Dashboard() {
         setBlockData({
           startDate: format(start, "yyyy-MM-dd"),
           duration: finalDuration,
-          type: targetType
+          type: targetType as DayType
         });
         setBlockEditorOpen(true);
       } else {
@@ -156,7 +162,7 @@ export function Dashboard() {
       acc[event.dayType] = (acc[event.dayType] || 0) + 1;
     }
     return acc;
-  }, { ROTATION: 0, TRAVEL: 0, VACATION: 0, STANDBY: 0, NORMAL: 0 } as Record<string, number>);
+  }, { ROTATION: 0, TRAVEL_ENTRY: 0, TRAVEL_EXIT: 0, VACATION: 0, STANDBY: 0, NORMAL: 0 } as Record<string, number>);
 
   let totalInPeriod = 0;
   if (view === "monthly") {
@@ -169,7 +175,7 @@ export function Dashboard() {
 
   const stats = {
     ...rawStats,
-    STANDBY: Math.max(0, totalInPeriod - (rawStats.ROTATION + rawStats.TRAVEL + rawStats.VACATION))
+    STANDBY: Math.max(0, totalInPeriod - (rawStats.ROTATION + rawStats.TRAVEL_ENTRY + rawStats.TRAVEL_EXIT + rawStats.VACATION))
   };
 
   return (
@@ -199,11 +205,11 @@ export function Dashboard() {
             <div className="hidden lg:flex items-center gap-2 mr-2">
               <div className="flex items-center gap-1.5 px-2 py-1 bg-[#ffc000] rounded border border-[#ffc000]/30">
                 <div className="w-2 h-2 rounded-full bg-[#2B1A0A]" />
-                <span className="text-[10px] font-bold text-[#2B1A0A]">ROTACIÓN</span>
+                <span className="text-[10px] font-bold text-[#2B1A0A]">ROTACIÓN / V. SALIDA</span>
               </div>
               <div className="flex items-center gap-1.5 px-2 py-1 bg-[#3CB371]/10 rounded border border-[#3CB371]/30">
                 <div className="w-2 h-2 rounded-full bg-[#3CB371]" />
-                <span className="text-[10px] font-bold text-[#3CB371]">VIAJE</span>
+                <span className="text-[10px] font-bold text-[#3CB371]">V. ENTRADA</span>
               </div>
               <div className="flex items-center gap-1.5 px-2 py-1 bg-[#c6d9f1] rounded border border-[#c6d9f1]/60">
                 <div className="w-2 h-2 rounded-full bg-[#1e3a8a]" />
@@ -242,16 +248,16 @@ export function Dashboard() {
                 <div className="flex items-center justify-between p-2 rounded-lg bg-[#ffc000]/20 border border-[#ffc000]/40">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-[#ffc000]" />
-                    <span className="text-xs font-medium uppercase tracking-tight">Rotación</span>
+                    <span className="text-xs font-medium uppercase tracking-tight">Rotación + V.Salida</span>
                   </div>
-                  <span className="text-sm font-bold text-[#2B1A0A]">{stats.ROTATION} d</span>
+                  <span className="text-sm font-bold text-[#2B1A0A]">{stats.ROTATION + stats.TRAVEL_EXIT} d</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-[#3CB371]/5 border border-[#3CB371]/10">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-[#3CB371]" />
-                    <span className="text-xs font-medium uppercase tracking-tight">Viaje</span>
+                    <span className="text-xs font-medium uppercase tracking-tight">Viaje Entrada</span>
                   </div>
-                  <span className="text-sm font-bold text-[#3CB371]">{stats.TRAVEL} d</span>
+                  <span className="text-sm font-bold text-[#3CB371]">{stats.TRAVEL_ENTRY} d</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-[#c6d9f1]/20 border border-[#c6d9f1]/40">
                   <div className="flex items-center gap-2">

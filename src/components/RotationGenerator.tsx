@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -84,10 +83,10 @@ export function RotationGenerator({ onGenerate, isGenerating, defaultDate }: Rot
                 <SelectValue placeholder="Selecciona estado inicial" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ROTATION">Rotación</SelectItem>
-                <SelectItem value="VACATION">Vacaciones</SelectItem>
-                <SelectItem value="TRAVEL_ENTRY">Viaje de Entrada</SelectItem>
-                <SelectItem value="TRAVEL_EXIT">Viaje de Salida</SelectItem>
+                <SelectItem value="ROTATION">Rotación (28 días)</SelectItem>
+                <SelectItem value="TRAVEL_EXIT">Viaje de Salida (Amarillo)</SelectItem>
+                <SelectItem value="VACATION">Vacaciones (26 días)</SelectItem>
+                <SelectItem value="TRAVEL_ENTRY">Viaje de Entrada (Verde)</SelectItem>
                 <SelectItem value="STANDBY">Standby</SelectItem>
               </SelectContent>
             </Select>

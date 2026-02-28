@@ -77,10 +77,17 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
                 </Label>
               </div>
               <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
-                <RadioGroupItem value="TRAVEL" id="travel" />
-                <Label htmlFor="travel" className="flex items-center gap-2 cursor-pointer">
+                <RadioGroupItem value="TRAVEL_EXIT" id="travel_exit" />
+                <Label htmlFor="travel_exit" className="flex items-center gap-2 cursor-pointer">
+                  <div className="w-3 h-3 rounded-full bg-[#ffc000]" />
+                  Viaje Salida
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
+                <RadioGroupItem value="TRAVEL_ENTRY" id="travel_entry" />
+                <Label htmlFor="travel_entry" className="flex items-center gap-2 cursor-pointer">
                   <div className="w-3 h-3 rounded-full bg-[#3CB371]" />
-                  Viaje
+                  Viaje Entrada
                 </Label>
               </div>
               <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
@@ -107,7 +114,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
             </RadioGroup>
           </div>
 
-          {(dayType === "TRAVEL" || dayType === "ROTATION" || dayType === "STANDBY") && (
+          {(dayType === "TRAVEL_ENTRY" || dayType === "TRAVEL_EXIT" || dayType === "ROTATION" || dayType === "STANDBY") && (
             <div className="space-y-4 border-t pt-4">
                <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
