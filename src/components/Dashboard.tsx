@@ -68,55 +68,19 @@ export function Dashboard() {
         let start = date;
         let targetType = event.dayType;
 
-        // Si es un día de viaje, detectamos si pertenece al final de un bloque
-        if (targetType === "TRAVEL_ENTRY") {
-          const dayBefore = subDays(date, 1);
-          if (events[format(dayBefore, "yyyy-MM-dd")]?.dayType === "VACATION") {
-            targetType = "VACATION";
-            let checkDate = dayBefore;
-            while (events[format(checkDate, "yyyy-MM-dd")]?.dayType === "VACATION") {
-              start = checkDate;
-              checkDate = subDays(checkDate, 1);
-            }
-          }
-        } else if (targetType === "TRAVEL_EXIT") {
-          const dayBefore = subDays(date, 1);
-          if (events[format(dayBefore, "yyyy-MM-dd")]?.dayType === "ROTATION") {
-            targetType = "ROTATION";
-            let checkDate = dayBefore;
-            while (events[format(checkDate, "yyyy-MM-dd")]?.dayType === "ROTATION") {
-              start = checkDate;
-              checkDate = subDays(checkDate, 1);
-            }
-          }
-        } else {
-          // Búsqueda estándar del inicio del bloque
-          let checkDate = subDays(date, 1);
-          while (events[format(checkDate, "yyyy-MM-dd")]?.dayType === targetType) {
-            start = checkDate;
-            checkDate = subDays(checkDate, 1);
-          }
+        // Búsqueda del inicio del bloque
+        let checkDate = subDays(date, 1);
+        while (events[format(checkDate, "yyyy-MM-dd")]?.dayType === targetType) {
+          start = checkDate;
+          checkDate = subDays(checkDate, 1);
         }
 
         // Calcular duración total del bloque detectado
         let finalDuration = 0;
         let scanDate = start;
-        if (targetType === "ROTATION") {
-          while (events[format(scanDate, "yyyy-MM-dd")]?.dayType === "ROTATION") {
-            finalDuration++;
-            scanDate = addDays(scanDate, 1);
-          }
-          if (events[format(scanDate, "yyyy-MM-dd")]?.dayType === "TRAVEL_EXIT") {
-            finalDuration++;
-          }
-        } else {
-          while (events[format(scanDate, "yyyy-MM-dd")]?.dayType === "VACATION") {
-            finalDuration++;
-            scanDate = addDays(scanDate, 1);
-          }
-          if (events[format(scanDate, "yyyy-MM-dd")]?.dayType === "TRAVEL_ENTRY") {
-            finalDuration++;
-          }
+        while (events[format(scanDate, "yyyy-MM-dd")]?.dayType === targetType) {
+          finalDuration++;
+          scanDate = addDays(scanDate, 1);
         }
 
         setBlockData({
@@ -203,6 +167,14 @@ export function Dashboard() {
           
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
             <div className="hidden lg:flex items-center gap-2 mr-2">
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#c6d9f1] rounded border border-[#c6d9f1]/60">
+                <div className="w-2 h-2 rounded-full bg-[#1e3a8a]" />
+                <span className="text-[10px] font-bold text-[#1e3a8a]">VACACIONES</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#3CB371]/10 rounded border border-[#3CB371]/30">
+                <div className="w-2 h-2 rounded-full bg-[#3CB371]" />
+                <span className="text-[10px] font-bold text-[#3CB371]">V. ENTRADA</span>
+              </div>
               <div className="flex items-center gap-1.5 px-2 py-1 bg-[#ffc000]/10 rounded border border-[#ffc000]/30">
                 <div className="w-2 h-2 rounded-full bg-[#ffc000]" />
                 <span className="text-[10px] font-bold text-[#ffc000]">ROTACIÓN</span>
@@ -210,14 +182,6 @@ export function Dashboard() {
               <div className="flex items-center gap-1.5 px-2 py-1 bg-[#ffff00]/10 rounded border border-[#ffff00]/30">
                 <div className="w-2 h-2 rounded-full bg-[#ffff00]" />
                 <span className="text-[10px] font-bold text-[#b8860b]">V. SALIDA</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#3CB371]/10 rounded border border-[#3CB371]/30">
-                <div className="w-2 h-2 rounded-full bg-[#3CB371]" />
-                <span className="text-[10px] font-bold text-[#3CB371]">V. ENTRADA</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#c6d9f1] rounded border border-[#c6d9f1]/60">
-                <div className="w-2 h-2 rounded-full bg-[#1e3a8a]" />
-                <span className="text-[10px] font-bold text-[#1e3a8a]">VACACIONES</span>
               </div>
               <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-200 rounded border border-slate-300">
                 <div className="w-2 h-2 rounded-full bg-slate-400" />
@@ -249,6 +213,20 @@ export function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#c6d9f1]/20 border border-[#c6d9f1]/40">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#c6d9f1]" />
+                    <span className="text-xs font-medium uppercase tracking-tight">Vacaciones</span>
+                  </div>
+                  <span className="text-sm font-bold text-[#1e3a8a]">{stats.VACATION} d</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#3CB371]/5 border border-[#3CB371]/10">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#3CB371]" />
+                    <span className="text-xs font-medium uppercase tracking-tight">V. Entrada</span>
+                  </div>
+                  <span className="text-sm font-bold text-[#3CB371]">{stats.TRAVEL_ENTRY} d</span>
+                </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-[#ffc000]/10 border border-[#ffc000]/20">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-[#ffc000]" />
@@ -262,20 +240,6 @@ export function Dashboard() {
                     <span className="text-xs font-medium uppercase tracking-tight">V. Salida</span>
                   </div>
                   <span className="text-sm font-bold text-[#b8860b]">{stats.TRAVEL_EXIT} d</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#3CB371]/5 border border-[#3CB371]/10">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#3CB371]" />
-                    <span className="text-xs font-medium uppercase tracking-tight">V. Entrada</span>
-                  </div>
-                  <span className="text-sm font-bold text-[#3CB371]">{stats.TRAVEL_ENTRY} d</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#c6d9f1]/20 border border-[#c6d9f1]/40">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#c6d9f1]" />
-                    <span className="text-xs font-medium uppercase tracking-tight">Vacaciones</span>
-                  </div>
-                  <span className="text-sm font-bold text-[#1e3a8a]">{stats.VACATION} d</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-slate-100 border border-slate-200">
                   <div className="flex items-center gap-2">
