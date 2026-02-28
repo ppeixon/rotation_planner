@@ -46,7 +46,7 @@ export function MonthGrid({ monthDate, events, mini = false, onDayClick }: Month
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-px bg-border border rounded-md overflow-hidden">
+      <div className="grid grid-cols-7 gap-px bg-zinc-300 dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 rounded-md overflow-hidden">
         {days.map((day) => {
           const dateKey = format(day, "yyyy-MM-dd");
           const event = events[dateKey];
