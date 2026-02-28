@@ -26,7 +26,7 @@ interface MonthGridProps {
 const TYPE_COLORS: Record<string, string> = {
   ROTATION: "bg-[#FF8C00] text-white",
   TRAVEL: "bg-[#3CB371] text-white",
-  VACATION: "bg-[#7EB6FF] text-white",
+  VACATION: "bg-[#BADCFF] text-blue-900",
   NORMAL: "bg-transparent",
 };
 
@@ -73,14 +73,14 @@ export function MonthGrid({ monthDate, events, mini = false, onDayClick }: Month
               
               {!mini && isCurrentMonth && event && (
                 <div className="absolute bottom-1 right-1 flex gap-0.5">
-                   {event.flightTicketPurchased && <Plane className="w-3 h-3 text-white fill-white" />}
-                   {event.notes && <StickyNote className="w-3 h-3 text-white fill-white" />}
+                   {event.flightTicketPurchased && <Plane className={cn("w-3 h-3", event.dayType === "VACATION" ? "text-blue-900 fill-blue-900" : "text-white fill-white")} />}
+                   {event.notes && <StickyNote className={cn("w-3 h-3", event.dayType === "VACATION" ? "text-blue-900 fill-blue-900" : "text-white fill-white")} />}
                 </div>
               )}
 
               {mini && isCurrentMonth && event && (
                 <div className="absolute top-0 right-0 p-0.5">
-                  {(event.flightTicketPurchased || event.notes) && <div className="w-1 h-1 rounded-full bg-white animate-pulse" />}
+                  {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full animate-pulse", event.dayType === "VACATION" ? "bg-blue-900" : "bg-white")} />}
                 </div>
               )}
             </div>
