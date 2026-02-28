@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { useRotation } from "@/hooks/useRotation";
 import { MonthGrid } from "./Calendar/MonthGrid";
 import { DayEditor } from "./Calendar/DayEditor";
@@ -9,7 +9,6 @@ import { RotationGenerator } from "./RotationGenerator";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { 
   format, 
   addMonths, 
@@ -19,9 +18,7 @@ import {
   endOfYear,
   addYears,
   subYears,
-  startOfMonth,
-  setYear,
-  setMonth
+  startOfMonth
 } from "date-fns";
 import { 
   ChevronLeft, 
@@ -33,11 +30,6 @@ import {
   BarChart3
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { cn } from "@/lib/utils";
-
-const START_YEAR = 2013;
-const END_YEAR = 2030;
-const YEARS = Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, i) => START_YEAR + i);
 
 export function Dashboard() {
   const { user, logout } = useAuth();
@@ -45,16 +37,6 @@ export function Dashboard() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [view, setView] = useState<"annual" | "monthly">("annual");
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // Auto-scroll to current year tab on load
-    const currentYear = currentDate.getFullYear();
-    const activeTab = document.getElementById(`year-tab-${currentYear}`);
-    if (activeTab) {
-      activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
-  }, []);
 
   if (loading) {
     return (
@@ -74,11 +56,20 @@ export function Dashboard() {
     }
   };
 
-  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
-  const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
+  const next = () => {
+    if (view === "monthly") {
+      setCurrentDate(addMonths(currentDate, 1));
+    } else {
+      setCurrentDate(addYears(currentDate, 1));
+    }
+  };
 
-  const handleYearSelect = (year: number) => {
-    setCurrentDate(setYear(currentDate, year));
+  const prev = () => {
+    if (view === "monthly") {
+      setCurrentDate(subMonths(currentDate, 1));
+    } else {
+      setCurrentDate(subYears(currentDate, 1));
+    }
   };
 
   const yearMonths = eachMonthOfInterval({
@@ -218,54 +209,25 @@ export function Dashboard() {
 
           {/* Calendar Area */}
           <section className="flex-1 space-y-6">
-            <div className="space-y-4">
-              {/* Year Tabs */}
-              <ScrollArea className="w-full whitespace-nowrap rounded-xl border bg-card p-1 shadow-sm">
-                <div className="flex w-max space-x-1 p-1">
-                  {YEARS.map((y) => (
-                    <Button
-                      key={y}
-                      id={`year-tab-${y}`}
-                      variant={currentDate.getFullYear() === y ? "default" : "ghost"}
-                      size="sm"
-                      className={cn(
-                        "rounded-lg px-6 font-bold text-sm transition-all",
-                        currentDate.getFullYear() === y ? "shadow-md scale-105" : "text-muted-foreground"
-                      )}
-                      onClick={() => handleYearSelect(y)}
-                    >
-                      {y}
-                    </Button>
-                  ))}
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
+            <div className="flex items-center justify-between gap-4">
+              {/* Mobile View Toggler */}
+              <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="md:hidden w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="monthly">Mes</TabsTrigger>
+                  <TabsTrigger value="annual">Año</TabsTrigger>
+                </TabsList>
+              </Tabs>
 
-              <div className="flex items-center justify-between gap-4">
-                {/* Mobile View Toggler */}
-                <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="md:hidden w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="monthly">Mes</TabsTrigger>
-                    <TabsTrigger value="annual">Año</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-
-                {/* Monthly Controls - Only visible in monthly view or to show active month */}
-                <div className="flex items-center gap-4 bg-card px-4 py-2 rounded-full border shadow-sm mx-auto md:mx-0">
-                  {view === "monthly" && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prevMonth}>
-                      <ChevronLeft className="w-5 h-5" />
-                    </Button>
-                  )}
-                  <h2 className="font-headline font-bold text-base min-w-[140px] text-center uppercase tracking-wide">
-                    {view === "monthly" ? format(currentDate, "MMMM yyyy") : format(currentDate, "yyyy")}
-                  </h2>
-                  {view === "monthly" && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={nextMonth}>
-                      <ChevronRight className="w-5 h-5" />
-                    </Button>
-                  )}
-                </div>
+              <div className="flex items-center gap-4 bg-card px-4 py-2 rounded-full border shadow-sm mx-auto md:mx-0">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prev}>
+                  <ChevronLeft className="w-5 h-5" />
+                </Button>
+                <h2 className="font-headline font-bold text-base min-w-[140px] text-center uppercase tracking-wide">
+                  {view === "monthly" ? format(currentDate, "MMMM yyyy") : format(currentDate, "yyyy")}
+                </h2>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={next}>
+                  <ChevronRight className="w-5 h-5" />
+                </Button>
               </div>
             </div>
 
