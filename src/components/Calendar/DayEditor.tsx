@@ -72,7 +72,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
               <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
                 <RadioGroupItem value="ROTATION" id="rotation" />
                 <Label htmlFor="rotation" className="flex items-center gap-2 cursor-pointer">
-                   <div className="w-3 h-3 rounded-full bg-[#2B1A0A]" />
+                   <div className="w-3 h-3 rounded-full bg-[#FFD8A8]" />
                    Rotación
                 </Label>
               </div>

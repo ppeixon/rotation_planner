@@ -94,7 +94,7 @@ export function Dashboard() {
           
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-2 mr-4">
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#2B1A0A]/10 rounded border border-[#2B1A0A]/30">
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#FFD8A8] rounded border border-[#FFD8A8]/30">
                 <div className="w-2 h-2 rounded-full bg-[#2B1A0A]" />
                 <span className="text-[10px] font-bold text-[#2B1A0A]">ROTACIÓN</span>
               </div>
@@ -132,9 +132,9 @@ export function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#2B1A0A]/5 border border-[#2B1A0A]/10">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#FFD8A8]/10 border border-[#FFD8A8]/30">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#2B1A0A]" />
+                    <div className="w-3 h-3 rounded-full bg-[#FFD8A8]" />
                     <span className="text-xs font-medium uppercase tracking-tight">Rotación</span>
                   </div>
                   <span className="text-sm font-bold text-[#2B1A0A]">{stats.ROTATION} d</span>
