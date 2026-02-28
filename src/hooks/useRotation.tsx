@@ -29,6 +29,8 @@ export function useRotation() {
         setSettings(docSnap.data() as UserSettings);
       } else {
         const defaultSettings: UserSettings = {
+          id: "profile",
+          userId: user.uid,
           startRotationDate: null,
           generateMonthsAhead: 18,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -60,6 +62,7 @@ export function useRotation() {
     const existing = events[dateKey];
     
     const newEvent: DayEvent = {
+      id: dateKey,
       dateKey,
       dayType: partial.dayType ?? existing?.dayType ?? "NORMAL",
       flightTicketPurchased: partial.flightTicketPurchased ?? existing?.flightTicketPurchased ?? false,
@@ -68,6 +71,7 @@ export function useRotation() {
       source: "MANUAL",
       updatedAt: Date.now(),
       updatedBy: user.uid,
+      userId: user.uid,
     };
     
     setDocumentNonBlocking(dayRef, newEvent, { merge: true });
@@ -80,7 +84,9 @@ export function useRotation() {
     setDocumentNonBlocking(settingsRef, {
       ...settings,
       startRotationDate: startDate.getTime(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      userId: user.uid,
+      id: "profile"
     }, { merge: true });
 
     const totalDays = settings.generateMonthsAhead * 31;
@@ -98,12 +104,14 @@ export function useRotation() {
         if (cycleDay < 28) {
            const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
            setDocumentNonBlocking(dayRef, {
+             id: dateKey,
              dateKey,
              dayType: "ROTATION",
              flightTicketPurchased: false,
              source: "GENERATED",
              updatedAt: Date.now(),
-             updatedBy: user.uid
+             updatedBy: user.uid,
+             userId: user.uid
            }, { merge: true });
         }
       }
