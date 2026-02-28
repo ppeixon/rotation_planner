@@ -14,20 +14,28 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { RefreshCw, Play, CalendarRange } from "lucide-react";
 import { format } from "date-fns";
 
 interface RotationGeneratorProps {
-  onGenerate: (startDateKey: string) => void;
+  onGenerate: (startDateKey: string, initialType: string, initialDuration: number) => void;
   isGenerating?: boolean;
   defaultDate?: string;
 }
 
 export function RotationGenerator({ onGenerate, isGenerating, defaultDate }: RotationGeneratorProps) {
   const [startDate, setStartDate] = useState(defaultDate || format(new Date(), "yyyy-MM-dd"));
+  const [initialType, setInitialType] = useState<string>("ROTATION");
+  const [initialDuration, setInitialDuration] = useState<number>(28);
   const [open, setOpen] = useState(false);
 
-  // Sincronizar la fecha por defecto cuando se abre el diálogo o cambia el año en el Dashboard
   useEffect(() => {
     if (open && defaultDate) {
       setStartDate(defaultDate);
@@ -35,8 +43,7 @@ export function RotationGenerator({ onGenerate, isGenerating, defaultDate }: Rot
   }, [open, defaultDate]);
 
   const handleGenerate = () => {
-    // Pasar directamente el string de la fecha para evitar desfases de zona horaria con el objeto Date
-    onGenerate(startDate);
+    onGenerate(startDate, initialType, initialDuration);
     setOpen(false);
   };
 
@@ -52,27 +59,50 @@ export function RotationGenerator({ onGenerate, isGenerating, defaultDate }: Rot
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <RefreshCw className="w-5 h-5 text-primary" />
-            Generador de Rotación
+            Configurar Inicio de Año
           </DialogTitle>
           <DialogDescription className="text-sm">
-            Define la fecha de inicio de tu próxima rotación. Se generarán bloques de 28 días automáticamente **solo para el año en curso** de la fecha seleccionada.
+            Define cómo comienza tu calendario y el sistema generará el ciclo automático: Vacaciones (26+1) y Rotación (28+1).
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
           <div className="space-y-3">
-            <Label htmlFor="startDate" className="text-sm font-semibold">Fecha de Inicio de Rotación</Label>
+            <Label htmlFor="startDate" className="text-sm font-semibold">Fecha de Inicio</Label>
             <Input
               id="startDate"
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="h-12 rounded-xl border-primary/20 focus:ring-primary"
+              className="h-12 rounded-xl border-primary/20"
             />
           </div>
-          <div className="bg-muted/50 p-4 rounded-2xl border border-muted-foreground/10">
-            <p className="text-xs text-muted-foreground leading-relaxed italic">
-              <strong>Nota:</strong> Este proceso solo afectará a los días del mismo año que la fecha elegida. Los años anteriores y posteriores no se verán modificados.
-            </p>
+
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">¿Cómo comienza el periodo?</Label>
+            <Select value={initialType} onValueChange={setInitialType}>
+              <SelectTrigger className="h-12 rounded-xl">
+                <SelectValue placeholder="Selecciona estado inicial" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ROTATION">Rotación</SelectItem>
+                <SelectItem value="VACATION">Vacaciones</SelectItem>
+                <SelectItem value="TRAVEL_ENTRY">Viaje de Entrada</SelectItem>
+                <SelectItem value="TRAVEL_EXIT">Viaje de Salida</SelectItem>
+                <SelectItem value="STANDBY">Standby</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-3">
+            <Label htmlFor="duration" className="text-sm font-semibold">Duración de este primer bloque (días)</Label>
+            <Input
+              id="duration"
+              type="number"
+              min="1"
+              value={initialDuration}
+              onChange={(e) => setInitialDuration(parseInt(e.target.value) || 1)}
+              className="h-12 rounded-xl border-primary/20"
+            />
           </div>
         </div>
         <DialogFooter className="gap-2 sm:gap-0">

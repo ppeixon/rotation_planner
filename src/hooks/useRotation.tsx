@@ -13,8 +13,7 @@ import {
   startOfDay, 
   parseISO, 
   endOfYear, 
-  subDays,
-  isSameYear
+  subDays 
 } from "date-fns";
 
 export function useRotation() {
@@ -68,13 +67,11 @@ export function useRotation() {
   const internalUpdateDay = (dateKey: string, type: DayType, source: "MANUAL" | "GENERATED" = "GENERATED") => {
     if (!user || !db) return;
     
-    // Respetar prioridad de entradas manuales: si existe y es MANUAL, no sobreescribir con lógica automática
     const existing = events[dateKey];
     if (source === "GENERATED" && existing?.source === "MANUAL") {
       return;
     }
 
-    // Evitar escrituras redundantes si el tipo ya es el correcto
     if (existing?.dayType === type && existing?.source === source) {
       return;
     }
@@ -115,75 +112,99 @@ export function useRotation() {
     setDocumentNonBlocking(dayRef, newEvent, { merge: true });
   };
 
-  const generateRotations = (startDateKey: string) => {
-    if (!user || !settings || !db) return;
+  const generateRotations = (startDateKey: string, initialType: string, initialDuration: number) => {
+    if (!user || !db) return;
     
     const start = startOfDay(parseISO(startDateKey));
     const currentYear = start.getFullYear();
     const endGen = endOfYear(start);
-
-    const settingsRef = doc(db, "users", user.uid, "settings", "profile");
-    setDocumentNonBlocking(settingsRef, {
-      ...settings,
-      startRotationDate: start.getTime(),
-      updatedAt: Date.now(),
-    }, { merge: true });
-
     let current = start;
 
-    // TRAVEL day siempre antes de empezar un bloque de rotación
-    const preTravel = subDays(current, 1);
-    if (preTravel.getFullYear() === currentYear) {
-      internalUpdateDay(format(preTravel, "yyyy-MM-dd"), "TRAVEL", "GENERATED");
-    }
-
-    while (isBefore(current, addDays(endGen, 1))) {
-      // Bloque de Rotación (28 días)
-      for (let i = 0; i < 28; i++) {
+    // Función auxiliar para avanzar el ciclo
+    const applyCycle = (type: string, duration: number) => {
+      for (let i = 0; i < duration; i++) {
         if (current.getFullYear() !== currentYear) break;
-        internalUpdateDay(format(current, "yyyy-MM-dd"), "ROTATION", "GENERATED");
+        
+        let dayType: DayType = "NORMAL";
+        if (type === "ROTATION" || type === "TRAVEL_EXIT") dayType = "ROTATION"; // Salida es amarillo
+        if (type === "VACATION") dayType = "VACATION"; // Vacaciones es azul
+        if (type === "TRAVEL_ENTRY") dayType = "TRAVEL"; // Entrada es verde
+        if (type === "STANDBY") dayType = "STANDBY"; // Standby es gris
+
+        internalUpdateDay(format(current, "yyyy-MM-dd"), dayType, "GENERATED");
         current = addDays(current, 1);
       }
-      if (current.getFullYear() !== currentYear) break;
+    };
 
-      // Bloque de Vacaciones (28 días: 27 VACATION + 1 TRAVEL)
-      for (let i = 0; i < 27; i++) {
-        if (current.getFullYear() !== currentYear) break;
-        internalUpdateDay(format(current, "yyyy-MM-dd"), "VACATION", "GENERATED");
-        current = addDays(current, 1);
+    // 1. Aplicar el bloque inicial
+    applyCycle(initialType, initialDuration);
+
+    // 2. Continuar el ciclo hasta final de año
+    // Orden: Vacaciones (26) -> Viaje Entrada (1) -> Rotación (28) -> Viaje Salida (1)
+    let nextStep = "";
+    if (initialType === "ROTATION") nextStep = "TRAVEL_EXIT";
+    else if (initialType === "TRAVEL_EXIT") nextStep = "VACATION";
+    else if (initialType === "VACATION") nextStep = "TRAVEL_ENTRY";
+    else if (initialType === "TRAVEL_ENTRY") nextStep = "ROTATION";
+    else nextStep = "VACATION"; // Por defecto tras Standby o similar
+
+    while (current.getFullYear() === currentYear && isBefore(current, addDays(endGen, 1))) {
+      if (nextStep === "VACATION") {
+        applyCycle("VACATION", 26);
+        nextStep = "TRAVEL_ENTRY";
+      } else if (nextStep === "TRAVEL_ENTRY") {
+        applyCycle("TRAVEL_ENTRY", 1);
+        nextStep = "ROTATION";
+      } else if (nextStep === "ROTATION") {
+        applyCycle("ROTATION", 28);
+        nextStep = "TRAVEL_EXIT";
+      } else if (nextStep === "TRAVEL_EXIT") {
+        applyCycle("TRAVEL_EXIT", 1);
+        nextStep = "VACATION";
       }
-      if (current.getFullYear() !== currentYear) break;
-      
-      // El último día de la secuencia de vacaciones es SIEMPRE TRAVEL
-      internalUpdateDay(format(current, "yyyy-MM-dd"), "TRAVEL", "GENERATED");
-      current = addDays(current, 1);
     }
   };
 
   const resyncChain = async (anchorDate: string, newDuration: number, type: DayType) => {
-    if (!user || !db || !settings) return;
+    if (!user || !db) return;
 
     const start = startOfDay(parseISO(anchorDate));
     const currentYear = start.getFullYear();
     const endGen = endOfYear(start);
     let current = start;
 
-    // 1. Aplicar el bloque editado
     if (type === "ROTATION") {
-      // TRAVEL obligatorio antes de rotación
-      const preTravel = subDays(start, 1);
-      if (preTravel.getFullYear() === currentYear) {
-        internalUpdateDay(format(preTravel, "yyyy-MM-dd"), "TRAVEL", "GENERATED");
-      }
-
-      // Marcar los nuevos días de rotación
+      // Bloque Rotación: N-1 días rotación + 1 día viaje salida (todo amarillo)
       for (let i = 0; i < newDuration; i++) {
         if (current.getFullYear() !== currentYear) break;
         internalUpdateDay(format(current, "yyyy-MM-dd"), "ROTATION", "GENERATED");
         current = addDays(current, 1);
       }
+      
+      // Tras rotación siempre vienen Vacaciones
+      while (current.getFullYear() === currentYear && isBefore(current, addDays(endGen, 1))) {
+        // Ciclo estándar desde Vacaciones
+        for (let i = 0; i < 26; i++) {
+          if (current.getFullYear() !== currentYear) break;
+          internalUpdateDay(format(current, "yyyy-MM-dd"), "VACATION", "GENERATED");
+          current = addDays(current, 1);
+        }
+        if (current.getFullYear() === currentYear) {
+          internalUpdateDay(format(current, "yyyy-MM-dd"), "TRAVEL", "GENERATED"); // Viaje Entrada
+          current = addDays(current, 1);
+        }
+        for (let i = 0; i < 28; i++) {
+          if (current.getFullYear() !== currentYear) break;
+          internalUpdateDay(format(current, "yyyy-MM-dd"), "ROTATION", "GENERATED");
+          current = addDays(current, 1);
+        }
+        if (current.getFullYear() === currentYear) {
+          internalUpdateDay(format(current, "yyyy-MM-dd"), "ROTATION", "GENERATED"); // Viaje Salida
+          current = addDays(current, 1);
+        }
+      }
     } else {
-      // Bloque VACATION: n-1 vacaciones + 1 viaje
+      // Bloque Vacaciones: N-1 días vacaciones + 1 día viaje entrada (verde)
       for (let i = 0; i < newDuration - 1; i++) {
         if (current.getFullYear() !== currentYear) break;
         internalUpdateDay(format(current, "yyyy-MM-dd"), "VACATION", "GENERATED");
@@ -193,33 +214,28 @@ export function useRotation() {
         internalUpdateDay(format(current, "yyyy-MM-dd"), "TRAVEL", "GENERATED");
         current = addDays(current, 1);
       }
-    }
 
-    // 2. Continuar la cadena con bloques estandard 28/28 hasta final de año
-    let nextIsRotation = (type === "VACATION");
-
-    while (isBefore(current, addDays(endGen, 1)) && current.getFullYear() === currentYear) {
-      if (nextIsRotation) {
-        // Bloque Rotación estándar (28 días)
-        // No necesita TRAVEL adicional porque el bloque previo de vacaciones ya terminó en TRAVEL
+      // Tras vacaciones siempre viene Rotación
+      while (current.getFullYear() === currentYear && isBefore(current, addDays(endGen, 1))) {
         for (let i = 0; i < 28; i++) {
           if (current.getFullYear() !== currentYear) break;
           internalUpdateDay(format(current, "yyyy-MM-dd"), "ROTATION", "GENERATED");
           current = addDays(current, 1);
         }
-      } else {
-        // Bloque Vacaciones estándar (27 VAC + 1 TRAVEL)
-        for (let i = 0; i < 27; i++) {
+        if (current.getFullYear() === currentYear) {
+          internalUpdateDay(format(current, "yyyy-MM-dd"), "ROTATION", "GENERATED"); // Viaje Salida
+          current = addDays(current, 1);
+        }
+        for (let i = 0; i < 26; i++) {
           if (current.getFullYear() !== currentYear) break;
           internalUpdateDay(format(current, "yyyy-MM-dd"), "VACATION", "GENERATED");
           current = addDays(current, 1);
         }
         if (current.getFullYear() === currentYear) {
-          internalUpdateDay(format(current, "yyyy-MM-dd"), "TRAVEL", "GENERATED");
+          internalUpdateDay(format(current, "yyyy-MM-dd"), "TRAVEL", "GENERATED"); // Viaje Entrada
           current = addDays(current, 1);
         }
       }
-      nextIsRotation = !nextIsRotation;
     }
   };
 
