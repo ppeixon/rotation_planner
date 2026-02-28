@@ -1,12 +1,26 @@
+
 "use client";
 
+import { useState } from "react";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { Dashboard } from "@/components/Dashboard";
 import { Button } from "@/components/ui/button";
-import { Calendar, ShieldCheck, Globe, Zap } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Calendar, ShieldCheck, Globe, Zap, Lock } from "lucide-react";
 
 function HomePage() {
   const { user, loading, login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    await login(email, password);
+    setIsSubmitting(false);
+  };
 
   if (loading) {
     return (
@@ -46,42 +60,56 @@ function HomePage() {
                <p className="text-xs text-muted-foreground">Sincronización instantánea en móvil y web.</p>
             </div>
           </div>
-
-          <div className="pt-6">
-            <Button size="lg" className="px-10 h-14 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform" onClick={() => login()}>
-              Iniciar con Google
-            </Button>
-            <p className="text-xs text-muted-foreground mt-4 italic">
-              * El acceso está restringido únicamente a usuarios autorizados.
-            </p>
-          </div>
         </div>
 
         <div className="relative group">
           <div className="absolute -inset-4 bg-gradient-to-tr from-primary to-accent opacity-20 blur-2xl rounded-3xl group-hover:opacity-30 transition-opacity"></div>
-          <div className="relative bg-white dark:bg-zinc-900 border rounded-3xl overflow-hidden shadow-2xl p-6 transform rotate-1 group-hover:rotate-0 transition-transform">
-             <div className="flex items-center justify-between mb-6">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-400" />
-                  <div className="w-3 h-3 rounded-full bg-amber-400" />
-                  <div className="w-3 h-3 rounded-full bg-emerald-400" />
+          <div className="relative bg-white dark:bg-zinc-900 border rounded-3xl overflow-hidden shadow-2xl p-8 transition-transform">
+             <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Acceso restringido</span>
                 </div>
-                <div className="text-xs font-bold text-muted-foreground uppercase">Vista Mensual - Marzo 2026</div>
              </div>
-             <div className="grid grid-cols-7 gap-2">
-                {Array.from({ length: 35 }).map((_, i) => (
-                  <div 
-                    key={i} 
-                    className={`aspect-square rounded-lg flex items-center justify-center text-[10px] font-bold ${
-                      i >= 7 && i <= 21 ? 'bg-[#FF8C00] text-white' : 
-                      i === 22 || i === 23 ? 'bg-[#3CB371] text-white' :
-                      'bg-slate-100 dark:bg-zinc-800'
-                    }`}
-                  >
-                    {i % 31 + 1}
-                  </div>
-                ))}
-             </div>
+             
+             <form onSubmit={handleSubmit} className="space-y-6 text-left">
+               <div className="space-y-2">
+                 <Label htmlFor="email">Correo Electrónico</Label>
+                 <Input 
+                   id="email" 
+                   type="email" 
+                   placeholder="tu@email.com" 
+                   value={email}
+                   onChange={(e) => setEmail(e.target.value)}
+                   required
+                   className="h-12 rounded-xl"
+                 />
+               </div>
+               <div className="space-y-2">
+                 <Label htmlFor="password">Contraseña</Label>
+                 <Input 
+                   id="password" 
+                   type="password" 
+                   placeholder="••••••••" 
+                   value={password}
+                   onChange={(e) => setPassword(e.target.value)}
+                   required
+                   className="h-12 rounded-xl"
+                 />
+               </div>
+               
+               <Button 
+                 type="submit" 
+                 className="w-full h-14 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+                 disabled={isSubmitting}
+               >
+                 {isSubmitting ? "Accediendo..." : "Entrar en RotationVista"}
+               </Button>
+             </form>
+
+             <p className="text-[10px] text-muted-foreground mt-6 italic text-center leading-tight">
+               * El acceso está configurado exclusivamente para la cuenta autorizada del administrador.
+             </p>
           </div>
         </div>
       </div>

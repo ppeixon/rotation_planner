@@ -1,33 +1,59 @@
+
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, User, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { useAuth as useFirebaseAuth } from "@/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: () => Promise<void>;
+  login: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const ALLOWED_EMAIL = "pepe.galan.chiner@gmail.com";
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const auth = useFirebaseAuth();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser && firebaseUser.email === ALLOWED_EMAIL) {
+        setUser(firebaseUser);
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
     return unsubscribe;
-  }, []);
+  }, [auth]);
 
-  const login = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+  const login = async (email: string, pass: string) => {
+    if (email.toLowerCase() !== ALLOWED_EMAIL) {
+      toast({
+        variant: "destructive",
+        title: "Acceso denegado",
+        description: "Este usuario no tiene permiso para acceder a la aplicación."
+      });
+      return;
+    }
+
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error de acceso",
+        description: "Credenciales incorrectas o usuario no encontrado."
+      });
+    }
   };
 
   const logout = async () => {
