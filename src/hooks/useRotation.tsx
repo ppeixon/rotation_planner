@@ -101,10 +101,10 @@ export function useRotation() {
       // Solo sobreescribimos si no hay nada o si lo que hay fue generado automáticamente
       if (!existing || existing.source === "GENERATED") {
         const diffInDays = differenceInDays(current, startDate);
-        // Ciclo de 56 días (28 trabajo + 28 descanso)
+        // Ciclo de 56 días (28 trabajo + 28 descanso/viaje)
         const cycleDay = ((diffInDays % 56) + 56) % 56;
         
-        let targetType: DayType = "NORMAL";
+        let targetType: DayType = "VACATION"; // Por defecto es VACATION
         
         if (cycleDay >= 0 && cycleDay < 28) {
           // Bloque de rotación (28 días)
@@ -114,8 +114,8 @@ export function useRotation() {
           targetType = "TRAVEL";
         }
 
-        // Si es un día especial del ciclo o si era generado y ahora debe ser normal, actualizamos
-        if (targetType !== "NORMAL" || (existing && existing.dayType !== "NORMAL")) {
+        // Siempre actualizamos si ha cambiado o si no existía, para asegurar el llenado de vacaciones
+        if (!existing || existing.dayType !== targetType) {
           const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
           setDocumentNonBlocking(dayRef, {
             id: dateKey,
