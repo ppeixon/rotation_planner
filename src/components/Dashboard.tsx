@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from "react";
@@ -70,7 +71,6 @@ export function Dashboard() {
     end: endOfYear(currentDate),
   });
 
-  // Calcular estadísticas basadas en el periodo visible (año o mes)
   const periodPrefix = view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "yyyy-MM");
   const stats = Object.entries(events).reduce((acc, [dateKey, event]) => {
     if (dateKey.startsWith(periodPrefix)) {
@@ -83,17 +83,29 @@ export function Dashboard() {
     <div className="min-h-screen flex flex-col bg-background text-foreground font-body">
       {/* Header */}
       <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 shrink-0">
             <div className="bg-primary p-2 rounded-lg">
               <CalendarIcon className="w-5 h-5 text-primary-foreground" />
             </div>
             <h1 className="font-headline font-bold text-lg hidden sm:block">Algeria Rotation Planner</h1>
             <h1 className="font-headline font-bold text-lg sm:hidden">ARP</h1>
           </div>
+
+          {/* View Toggler in Header */}
+          <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="hidden md:flex w-auto">
+            <TabsList className="grid grid-cols-2 h-9 w-[200px]">
+              <TabsTrigger value="monthly" className="gap-2">
+                <CalendarIcon className="w-4 h-4" /> Mes
+              </TabsTrigger>
+              <TabsTrigger value="annual" className="gap-2">
+                <LayoutGrid className="w-4 h-4" /> Año
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
           
-          <div className="flex items-center gap-2">
-            <div className="hidden lg:flex items-center gap-2 mr-4">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <div className="hidden lg:flex items-center gap-2 mr-2">
               <div className="flex items-center gap-1.5 px-2 py-1 bg-[#ffc000] rounded border border-[#ffc000]/30">
                 <div className="w-2 h-2 rounded-full bg-[#2B1A0A]" />
                 <span className="text-[10px] font-bold text-[#2B1A0A]">ROTACIÓN</span>
@@ -191,23 +203,21 @@ export function Dashboard() {
 
           {/* Calendar Area */}
           <section className="flex-1 space-y-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="w-full sm:w-auto">
+            <div className="flex items-center justify-between gap-4">
+              {/* Mobile View Toggler (Visible only on small screens) */}
+              <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="md:hidden w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="monthly" className="gap-2">
-                    <CalendarIcon className="w-4 h-4" /> Mes
-                  </TabsTrigger>
-                  <TabsTrigger value="annual" className="gap-2">
-                    <LayoutGrid className="w-4 h-4" /> Año
-                  </TabsTrigger>
+                  <TabsTrigger value="monthly">Mes</TabsTrigger>
+                  <TabsTrigger value="annual">Año</TabsTrigger>
                 </TabsList>
               </Tabs>
 
-              <div className="flex items-center gap-4 bg-card px-4 py-2 rounded-full border shadow-sm">
+              {/* Navigation Controls (Always visible) */}
+              <div className="flex items-center gap-4 bg-card px-4 py-2 rounded-full border shadow-sm mx-auto md:mx-0">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prevPeriod}>
                   <ChevronLeft className="w-5 h-5" />
                 </Button>
-                <h2 className="font-headline font-bold text-base min-w-[120px] text-center">
+                <h2 className="font-headline font-bold text-base min-w-[140px] text-center">
                   {view === "monthly" ? format(currentDate, "MMMM yyyy") : format(currentDate, "yyyy")}
                 </h2>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={nextPeriod}>
