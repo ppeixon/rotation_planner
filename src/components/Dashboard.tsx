@@ -22,7 +22,8 @@ import {
   startOfMonth,
   parseISO,
   subDays,
-  isSameDay
+  isSameDay,
+  getDaysInMonth
 } from "date-fns";
 import { 
   ChevronLeft, 
@@ -78,32 +79,12 @@ export function Dashboard() {
           duration++;
           checkDate = subDays(checkDate, 1);
         }
-
-        // Iterate forward to find the full current duration
-        let forwardDate = date;
-        while (events[format(addMonths(forwardDate, 0), "yyyy-MM-dd")] === undefined) break; // safety
-        
-        // Simplified: let's just find the start and then the user can decide duration
-        // To accurately find duration we'd need to go forward too
-        let endCheckDate = format(date, "yyyy-MM-dd");
-        let forwardDays = 0;
-        let current = date;
-        while (true) {
-           current = addYears(current, 0); // just to satisfy types if needed
-           const next = addMonths(current, 0); // dummy
-           const d = format(addYears(current, 0), "yyyy-MM-dd"); // dummy
-           
-           // Correct forward search
-           const nextDay = addYears(start, 0); // No, simpler:
-           break;
-        }
         
         // Re-calculating duration accurately
         let finalDuration = 0;
         let scanDate = start;
         while (events[format(scanDate, "yyyy-MM-dd")]?.dayType === targetType) {
           finalDuration++;
-          scanDate = addMonths(scanDate, 0); // dummy
           const actualNext = new Date(scanDate);
           actualNext.setDate(actualNext.getDate() + 1);
           scanDate = actualNext;
@@ -146,12 +127,30 @@ export function Dashboard() {
   });
 
   const periodPrefix = view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "yyyy-MM");
-  const stats = Object.entries(events).reduce((acc, [dateKey, event]) => {
+  
+  // Basic counts from events
+  const rawStats = Object.entries(events).reduce((acc, [dateKey, event]) => {
     if (dateKey.startsWith(periodPrefix)) {
       acc[event.dayType] = (acc[event.dayType] || 0) + 1;
     }
     return acc;
   }, { ROTATION: 0, TRAVEL: 0, VACATION: 0, STANDBY: 0, NORMAL: 0 } as Record<string, number>);
+
+  // Determine total days in current period for Standby calculation
+  let totalInPeriod = 0;
+  if (view === "monthly") {
+    totalInPeriod = getDaysInMonth(currentDate);
+  } else {
+    const year = currentDate.getFullYear();
+    const isLeap = (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0));
+    totalInPeriod = isLeap ? 366 : 365;
+  }
+
+  // Standby is the remainder: Total - (Rotation + Travel + Vacation)
+  const stats = {
+    ...rawStats,
+    STANDBY: Math.max(0, totalInPeriod - (rawStats.ROTATION + rawStats.TRAVEL + rawStats.VACATION))
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-body">
