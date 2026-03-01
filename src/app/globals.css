@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -60,15 +59,40 @@
 }
 
 .day-rotation { background-color: #ffc000; color: #2B1A0A; }
+
+/* Día de Viaje Entrada: Azul Vacaciones -> Verde Viaje */
 .day-travel-entry-split { 
   background: linear-gradient(45deg, #c6d9f1 50%, #3CB371 50%); 
-  color: white; 
+  color: #1e3a8a; /* Color de fuente de vacaciones */
 }
+
+/* Día de Viaje Salida: Naranja Rotación -> Azul Vacaciones */
 .day-travel-exit-split { 
   background: linear-gradient(135deg, #ffc000 50%, #c6d9f1 50%); 
   color: #2B1A0A; 
 }
+
+/* Primer Día de Rotación: Verde Viaje -> Naranja Rotación */
+.day-rotation-start-split {
+  background: linear-gradient(135deg, #3CB371 50%, #ffc000 50%); 
+  color: #2B1A0A;
+}
+
 .day-vacation { background-color: #c6d9f1; color: #1e3a8a; }
 .day-standby { background-color: #e2e8f0; color: #475569; }
 .day-normal { background-color: transparent; }
 .day-border { border: 1px solid hsl(var(--border)); }
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
