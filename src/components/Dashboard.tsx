@@ -53,7 +53,7 @@ export function Dashboard() {
     type: DayType;
   } | null>(null);
 
-  // Hook must be called before early return
+  // Memoize blocks calculation to ensure consistent hook order
   const blocksInYear = useMemo(() => {
     const yearStr = format(currentDate, "yyyy");
     const yearEvents = Object.entries(events)
@@ -205,19 +205,19 @@ export function Dashboard() {
 
           <div className="hidden xl:flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-x px-4">
             <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#c6d9f1]" /> Vac
+              <div className="w-2.5 h-2.5 rounded-full bg-[#c6d9f1]" /> Vacaciones
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#3CB371]" /> Ent
+              <div className="w-2.5 h-2.5 rounded-full bg-[#3CB371]" /> V. Entrada
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#ffc000]" /> Rot
+              <div className="w-2.5 h-2.5 rounded-full bg-[#ffc000]" /> Rotación
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#ffff00]" /> Sal
+              <div className="w-2.5 h-2.5 rounded-full bg-[#ffff00]" /> V. Salida
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-slate-300" /> Sby
+              <div className="w-2.5 h-2.5 rounded-full bg-slate-300" /> Standby
             </div>
           </div>
 
@@ -316,7 +316,7 @@ export function Dashboard() {
                             {block.type === "ROTATION" ? "Rotación" : "Vacaciones"}
                           </p>
                           <p className="text-[10px] text-muted-foreground">
-                            Inicia: {format(parseISO(block.start), "d MMM", { locale: es })}
+                            {format(parseISO(block.start), "d MMM", { locale: es })} - {format(addDays(parseISO(block.start), block.duration - 1), "d MMM", { locale: es })}
                           </p>
                         </div>
                       </div>
