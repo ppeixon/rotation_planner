@@ -746,10 +746,10 @@ export function Dashboard() {
                   />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Legend verticalAlign="top" height={36}/>
-                  <Bar dataKey="VACATION" name="Vacaciones" stackId="a" fill={CHART_COLORS.VACATION} radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="TRAVEL_ENTRY" name="V. Entrada" stackId="a" fill={CHART_COLORS.TRAVEL_ENTRY} />
+                  <Bar dataKey="TRAVEL_ENTRY" name="V. Entrada" stackId="a" fill={CHART_COLORS.TRAVEL_ENTRY} radius={[0, 0, 0, 0]} />
                   <Bar dataKey="ROTATION" name="Rotación" stackId="a" fill={CHART_COLORS.ROTATION} />
                   <Bar dataKey="TRAVEL_EXIT" name="V. Salida" stackId="a" fill={CHART_COLORS.TRAVEL_EXIT} />
+                  <Bar dataKey="VACATION" name="Vacaciones" stackId="a" fill={CHART_COLORS.VACATION} />
                   <Bar dataKey="STANDBY" name="Standby" stackId="a" fill={CHART_COLORS.STANDBY} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ChartContainer>
