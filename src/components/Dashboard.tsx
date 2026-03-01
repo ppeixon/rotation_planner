@@ -37,7 +37,8 @@ import {
   CartesianGrid, 
   XAxis, 
   YAxis,
-  Cell
+  Cell,
+  ReferenceLine
 } from "recharts";
 import { 
   format, 
@@ -744,6 +745,12 @@ export function Dashboard() {
                     tick={{ fontSize: 12, fontWeight: 700 }}
                   />
                   <ChartTooltip content={<ChartTooltipContent />} />
+                  <ReferenceLine 
+                    y={180} 
+                    stroke="hsl(var(--muted-foreground))" 
+                    strokeDasharray="3 3" 
+                    label={{ position: 'right', value: '180d', fill: 'hsl(var(--muted-foreground))', fontSize: 10, fontWeight: 'bold' }} 
+                  />
                   <Bar dataKey="TRAVEL_ENTRY" name="V. Entrada" stackId="a" fill={CHART_COLORS.TRAVEL_ENTRY} radius={[0, 0, 0, 0]} />
                   <Bar dataKey="ROTATION" name="Rotación" stackId="a" fill={CHART_COLORS.ROTATION} />
                   <Bar dataKey="TRAVEL_EXIT" name="V. Salida" stackId="a" fill={CHART_COLORS.TRAVEL_EXIT} />
