@@ -143,13 +143,7 @@ export const MonthGrid = React.memo(function MonthGrid({
                     {dayContent}
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-[200px] break-words p-3 rounded-xl shadow-xl border-primary/20 bg-card">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2 border-b pb-1 mb-1 border-primary/10">
-                        <StickyNote className="w-3 h-3 text-primary" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nota del día</span>
-                      </div>
-                      <p className="text-xs font-medium leading-relaxed">{event.notes}</p>
-                    </div>
+                    <p className="text-xs font-medium leading-relaxed">{event.notes}</p>
                   </TooltipContent>
                 </Tooltip>
               );
