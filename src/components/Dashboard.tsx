@@ -411,7 +411,13 @@ export function Dashboard() {
               <Checkbox 
                 id="toggle-travel" 
                 checked={showTravelDays} 
-                onCheckedChange={(checked) => setShowTravelDays(!!checked)}
+                onCheckedChange={(checked) => {
+                  const val = !!checked;
+                  setShowTravelDays(val);
+                  if (!val) {
+                    setShowClassicTravelDays(false);
+                  }
+                }}
               />
               <Label htmlFor="toggle-travel" className="text-[10px] font-bold uppercase tracking-tight cursor-pointer">
                 TRAVEL DAYS

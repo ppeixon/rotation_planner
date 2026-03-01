@@ -128,7 +128,7 @@ export function RotationGenerator({ onGenerate, onClearYear, isGenerating, defau
             <Button 
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="gap-2 rounded-xl px-6"
+              className="gap-2 rounded-xl px-6 bg-[#C1E1C1] hover:bg-[#B1D1B1] text-[#2B4B2B] border-none shadow-sm font-bold"
             >
               {isGenerating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
               Generar
