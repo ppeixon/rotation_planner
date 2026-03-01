@@ -38,7 +38,7 @@ interface MonthGridProps {
 const TYPE_COLORS: Record<string, string> = {
   ROTATION: "bg-[#ffc000] text-[#2B1A0A]",
   TRAVEL_ENTRY: "bg-[#3CB371] text-white",
-  TRAVEL_EXIT: "bg-[#ffff00] text-[#2B1A0A]",
+  TRAVEL_EXIT: "day-travel-exit-split",
   VACATION: "bg-[#c6d9f1] text-[#1e3a8a]",
   STANDBY: "bg-[#e2e8f0] text-slate-700",
   NORMAL: "bg-transparent",
@@ -89,7 +89,7 @@ export const MonthGrid = React.memo(function MonthGrid({
             const isTravelDay = event?.dayType === "TRAVEL_ENTRY" || event?.dayType === "TRAVEL_EXIT";
             const isDragTarget = isDragging && dragHoverDate === dateKey;
 
-            const colorClass = event && isCurrentMonth && dayType ? TYPE_COLORS[dayType] : "bg-background";
+            const colorClass = event && isCurrentMonth && dayType ? TYPE_COLORS[dayType] : "bg-background text-background";
 
             const dayContent = (
               <div

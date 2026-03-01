@@ -61,7 +61,10 @@
 
 .day-rotation { background-color: #ffc000; color: #2B1A0A; }
 .day-travel-entry { background-color: #3CB371; color: white; }
-.day-travel-exit { background-color: #ffff00; color: #2B1A0A; }
+.day-travel-exit-split { 
+  background: linear-gradient(45deg, #ffc000 50%, #c6d9f1 50%); 
+  color: #2B1A0A; 
+}
 .day-vacation { background-color: #c6d9f1; color: #1e3a8a; }
 .day-standby { background-color: #e2e8f0; color: #475569; }
 .day-normal { background-color: transparent; }
