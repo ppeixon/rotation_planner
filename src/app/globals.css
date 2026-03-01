@@ -60,27 +60,27 @@
 
 .day-rotation { background-color: #ffc000; color: #2B1A0A; }
 
-/* Día de Viaje Entrada: Azul Vacaciones -> Verde Viaje (Diagonal 45deg) */
+/* Día de Viaje Entrada: Azul Vacaciones (Top) -> Verde Viaje (Bottom) */
 .day-travel-entry-split { 
-  background: linear-gradient(45deg, #c6d9f1 50%, #3CB371 50%); 
+  background: linear-gradient(to bottom, #c6d9f1 50%, #3CB371 50%); 
   color: #1e3a8a; 
 }
 
-/* Día de Viaje Salida: Naranja Rotación -> Azul Vacaciones (Diagonal 135deg) */
+/* Día de Viaje Salida: Naranja Rotación (Top) -> Azul Vacaciones (Bottom) */
 .day-travel-exit-split { 
-  background: linear-gradient(135deg, #ffc000 50%, #c6d9f1 50%); 
+  background: linear-gradient(to bottom, #ffc000 50%, #c6d9f1 50%); 
   color: #2B1A0A; 
 }
 
-/* Primer Día de Rotación (Con Vuelos): Verde Viaje -> Naranja Rotación (Diagonal 135deg) */
+/* Primer Día de Rotación (Con Vuelos): Verde Viaje (Top) -> Naranja Rotación (Bottom) */
 .day-rotation-start-split {
-  background: linear-gradient(135deg, #3CB371 50%, #ffc000 50%); 
+  background: linear-gradient(to bottom, #3CB371 50%, #ffc000 50%); 
   color: #2B1A0A;
 }
 
-/* Primer Día de Rotación (Sin Vuelos): Azul Vacaciones -> Naranja Rotación (Diagonal 135deg) */
+/* Primer Día de Rotación (Sin Vuelos): Azul Vacaciones (Top) -> Naranja Rotación (Bottom) */
 .day-rotation-start-hidden-split {
-  background: linear-gradient(135deg, #c6d9f1 50%, #ffc000 50%); 
+  background: linear-gradient(to bottom, #c6d9f1 50%, #ffc000 50%); 
   color: #2B1A0A;
 }
 
