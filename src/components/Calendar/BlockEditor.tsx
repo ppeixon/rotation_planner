@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { format, parseISO, addDays, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { Settings2, Info, Plane, Plus, Minus, CalendarDays } from "lucide-react";
+import { Settings2, Info, Plane, Plus, Minus, CalendarDays, Clock } from "lucide-react";
 import { DayType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -40,8 +40,11 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
   };
 
   const isRotation = type === "ROTATION";
-  const typeLabel = isRotation ? "Rotación" : "Vacaciones";
-  const typeColor = isRotation ? "text-primary" : "text-[#1e3a8a]";
+  const isVacation = type === "VACATION";
+  const isStandby = type === "STANDBY";
+
+  const typeLabel = isRotation ? "Rotación" : isVacation ? "Vacaciones" : "Standby";
+  const typeColor = isRotation ? "text-primary" : isVacation ? "text-[#1e3a8a]" : "text-slate-600";
   const travelIconColor = isRotation ? "text-[#ffff00]" : "text-[#3CB371]";
 
   return (
@@ -53,7 +56,7 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
             Configurar {typeLabel}
           </DialogTitle>
           <DialogDescription className="text-sm">
-            Ajusta la duración del bloque. El día de viaje se calculará automáticamente.
+            Ajusta la duración del bloque de {typeLabel.toLowerCase()}.
           </DialogDescription>
         </DialogHeader>
 
@@ -67,13 +70,24 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
               </div>
               <p className="text-sm font-bold">{format(start, "d MMM yyyy", { locale: es })}</p>
             </div>
-            <div className="flex flex-col gap-1 p-4 bg-primary/5 rounded-2xl border border-primary/10">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Plane className={cn("w-4 h-4", travelIconColor)} />
-                <span className="text-[10px] uppercase font-bold tracking-wider">{isRotation ? "V. Salida" : "V. Entrada"}</span>
+            
+            {!isStandby ? (
+              <div className="flex flex-col gap-1 p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Plane className={cn("w-4 h-4", travelIconColor)} />
+                  <span className="text-[10px] uppercase font-bold tracking-wider">{isRotation ? "V. Salida" : "V. Entrada"}</span>
+                </div>
+                <p className="text-sm font-bold">{travelDate ? format(travelDate, "d MMM yyyy", { locale: es }) : "---"}</p>
               </div>
-              <p className="text-sm font-bold">{travelDate ? format(travelDate, "d MMM yyyy", { locale: es }) : "---"}</p>
-            </div>
+            ) : (
+              <div className="flex flex-col gap-1 p-4 bg-muted/40 rounded-2xl border border-muted">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="w-4 h-4 text-slate-400" />
+                  <span className="text-[10px] uppercase font-bold tracking-wider">Fin</span>
+                </div>
+                <p className="text-sm font-bold">{travelDate ? format(addDays(start, duration - 1), "d MMM yyyy", { locale: es }) : "---"}</p>
+              </div>
+            )}
           </div>
 
           {/* Ajuste de Duración */}
@@ -114,7 +128,10 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
           <div className="flex gap-3 p-4 bg-primary/5 border border-primary/10 rounded-2xl">
             <Info className="w-5 h-5 text-primary shrink-0" />
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Al guardar, se establecerá el día de viaje justo después de los {duration} días de {typeLabel.toLowerCase()} y se recalculará el resto del año siguiendo tu ciclo de 56 días.
+              {isStandby 
+                ? `Al guardar, se establecerán ${duration} días de standby y se reanudará el ciclo normal de rotaciones a partir de la fecha de finalización.`
+                : `Al guardar, se establecerá el día de viaje justo después de los ${duration} días de ${typeLabel.toLowerCase()} y se recalculará el resto del año siguiendo tu ciclo de 56 días.`
+              }
             </p>
           </div>
         </div>

@@ -85,7 +85,7 @@ export function Dashboard() {
     yearEvents.forEach(([dateKey, event]) => {
       const type = event.dayType;
       
-      if (type === "VACATION" || type === "ROTATION") {
+      if (type === "VACATION" || type === "ROTATION" || type === "STANDBY") {
         if (currentBlock && currentBlock.type === type) {
           currentBlock.duration++;
         } else {
@@ -188,9 +188,12 @@ export function Dashboard() {
   }
 
   const handleBlockDoubleClick = (block: { type: DayType; start: string; duration: number }) => {
+    // Para Standby, la duración que pasamos es la total del bloque
+    const effectiveDuration = (block.type === "ROTATION" || block.type === "VACATION") ? block.duration - 1 : block.duration;
+    
     setBlockData({
       startDate: block.start,
-      duration: block.duration - 1,
+      duration: effectiveDuration,
       type: block.type
     });
     setBlockEditorOpen(true);
@@ -212,7 +215,7 @@ export function Dashboard() {
         targetDate = subDays(date, 1);
       }
 
-      if (targetType === "ROTATION" || targetType === "VACATION") {
+      if (targetType === "ROTATION" || targetType === "VACATION" || targetType === "STANDBY") {
         const typeToFind = targetType as DayType;
         let start = targetDate;
         
@@ -286,14 +289,16 @@ export function Dashboard() {
   const occupiedDays = (rawStats.ROTATION || 0) + 
                       (rawStats.TRAVEL_ENTRY || 0) + 
                       (rawStats.TRAVEL_EXIT || 0) + 
-                      (rawStats.VACATION || 0);
+                      (rawStats.VACATION || 0) +
+                      (rawStats.STANDBY || 0);
 
   const stats = {
     VACATION: rawStats.VACATION || 0,
     TRAVEL_ENTRY: rawStats.TRAVEL_ENTRY || 0,
     ROTATION: rawStats.ROTATION || 0,
     TRAVEL_EXIT: rawStats.TRAVEL_EXIT || 0,
-    STANDBY: Math.max(0, totalInPeriod - occupiedDays)
+    STANDBY: rawStats.STANDBY || 0,
+    NORMAL: Math.max(0, totalInPeriod - occupiedDays)
   };
 
   return (
@@ -322,7 +327,7 @@ export function Dashboard() {
               <div className="w-2.5 h-2.5 rounded-full bg-[#ffff00]" /> V. Salida
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-slate-300" /> Standby
+              <div className="w-2.5 h-2.5 rounded-full bg-[#e2e8f0]" /> Standby
             </div>
           </div>
 
@@ -390,9 +395,9 @@ export function Dashboard() {
                   </div>
                   <span className="text-sm font-bold text-[#b8860b]">{stats.TRAVEL_EXIT} d</span>
                 </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-100 border border-slate-200">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#e2e8f0]/20 border border-slate-200">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-slate-300" />
+                    <div className="w-3 h-3 rounded-full bg-[#e2e8f0]" />
                     <span className="text-xs font-medium uppercase tracking-tight">Standby</span>
                   </div>
                   <span className="text-sm font-bold text-slate-700">{stats.STANDBY} d</span>
@@ -400,7 +405,7 @@ export function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm border-muted flex flex-col max-h-[calc(100vh-25rem)]">
+            <Card className="shadow-sm border-muted flex flex-col h-[calc(100vh-28rem)] min-h-[400px]">
               <CardHeader className="pb-3 shrink-0">
                 <CardTitle className="text-sm font-semibold flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -431,11 +436,13 @@ export function Dashboard() {
                       <div className="flex items-center gap-3">
                         <div className={cn(
                           "w-2.5 h-2.5 rounded-full shrink-0", 
-                          block.type === "ROTATION" ? "bg-[#ffc000]" : "bg-[#c6d9f1]"
+                          block.type === "ROTATION" ? "bg-[#ffc000]" : 
+                          block.type === "VACATION" ? "bg-[#c6d9f1]" : "bg-[#e2e8f0]"
                         )} />
                         <div>
                           <p className="font-bold text-foreground group-hover:text-primary transition-colors">
-                            {block.type === "ROTATION" ? "Rotación + V. Salida" : "Vacaciones + V. Entrada"}
+                            {block.type === "ROTATION" ? "Rotación + V. Salida" : 
+                             block.type === "VACATION" ? "Vacaciones + V. Entrada" : "Standby"}
                           </p>
                           <p className="text-[10px] text-muted-foreground">
                             {format(parseISO(block.start), "d MMM", { locale: es })} - {format(addDays(parseISO(block.start), block.duration - 1), "d MMM", { locale: es })}

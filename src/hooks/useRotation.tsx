@@ -178,21 +178,22 @@ export function useRotation() {
     const currentYear = current.getFullYear();
     const endGen = endOfYear(current);
 
-    // 1. Aplicar el bloque base modificado (los días base antes del viaje)
+    // 1. Aplicar el bloque base modificado
     for (let i = 0; i < newDuration; i++) {
       if (current.getFullYear() !== currentYear) break;
       internalUpdateDay(format(current, "yyyy-MM-dd"), type, "GENERATED");
       current = addDays(current, 1);
     }
 
-    // 2. Colocar el día de viaje correspondiente y saltar al siguiente estado
+    // 2. Determinar siguiente estado
     let nextState: "VAC" | "TE" | "ROT" | "TX";
     if (type === "VACATION") {
-      // Después de vacaciones siempre va Viaje de Entrada
       nextState = "TE";
     } else if (type === "ROTATION") {
-      // Después de rotación siempre va Viaje de Salida
       nextState = "TX";
+    } else if (type === "STANDBY") {
+      // Después de standby, reanudamos el ciclo con vacaciones como valor por defecto
+      nextState = "VAC";
     } else {
       return;
     }
