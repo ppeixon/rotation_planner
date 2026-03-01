@@ -53,6 +53,35 @@ export function Dashboard() {
     type: DayType;
   } | null>(null);
 
+  // Hook must be called before early return
+  const blocksInYear = useMemo(() => {
+    const yearStr = format(currentDate, "yyyy");
+    const yearEvents = Object.entries(events)
+      .filter(([dateKey]) => dateKey.startsWith(yearStr))
+      .sort(([a], [b]) => a.localeCompare(b));
+
+    const blocks: { type: DayType; start: string; duration: number }[] = [];
+    if (yearEvents.length === 0) return blocks;
+
+    let currentBlock: { type: DayType; start: string; duration: number } | null = null;
+
+    yearEvents.forEach(([dateKey, event]) => {
+      if (currentBlock && currentBlock.type === event.dayType) {
+        currentBlock.duration++;
+      } else {
+        if (currentBlock && (currentBlock.type === "ROTATION" || currentBlock.type === "VACATION")) {
+          blocks.push(currentBlock);
+        }
+        currentBlock = { type: event.dayType, start: dateKey, duration: 1 };
+      }
+    });
+    if (currentBlock && (currentBlock.type === "ROTATION" || currentBlock.type === "VACATION")) {
+      blocks.push(currentBlock);
+    }
+
+    return blocks;
+  }, [events, currentDate]);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
@@ -161,34 +190,6 @@ export function Dashboard() {
     TRAVEL_EXIT: rawStats.TRAVEL_EXIT || 0,
     STANDBY: Math.max(0, totalInPeriod - occupiedDays)
   };
-
-  const blocksInYear = useMemo(() => {
-    const yearStr = format(currentDate, "yyyy");
-    const yearEvents = Object.entries(events)
-      .filter(([dateKey]) => dateKey.startsWith(yearStr))
-      .sort(([a], [b]) => a.localeCompare(b));
-
-    const blocks: { type: DayType; start: string; duration: number }[] = [];
-    if (yearEvents.length === 0) return blocks;
-
-    let currentBlock: { type: DayType; start: string; duration: number } | null = null;
-
-    yearEvents.forEach(([dateKey, event]) => {
-      if (currentBlock && currentBlock.type === event.dayType) {
-        currentBlock.duration++;
-      } else {
-        if (currentBlock && (currentBlock.type === "ROTATION" || currentBlock.type === "VACATION")) {
-          blocks.push(currentBlock);
-        }
-        currentBlock = { type: event.dayType, start: dateKey, duration: 1 };
-      }
-    });
-    if (currentBlock && (currentBlock.type === "ROTATION" || currentBlock.type === "VACATION")) {
-      blocks.push(currentBlock);
-    }
-
-    return blocks;
-  }, [events, currentDate]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-body">
