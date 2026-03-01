@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'RotationVista - Algeria Rotation Planner',
+  title: 'Alg Rotation Plan',
   description: 'Manage your work rotations, flights, and vacations with real-time cloud sync.',
 };
 

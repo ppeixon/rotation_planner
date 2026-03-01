@@ -35,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
       if (firebaseUser && (firebaseUser.email === ADMIN_EMAIL || firebaseUser.email === VISITOR_EMAIL)) {
         setUser(firebaseUser);
         
@@ -42,16 +43,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setTargetUid(firebaseUser.uid);
           // Registrar UID del admin para que el visitante pueda encontrarlo
           const configRef = doc(db, "public", "admin_config");
-          setDoc(configRef, { adminUid: firebaseUser.uid }, { merge: true });
+          await setDoc(configRef, { adminUid: firebaseUser.uid }, { merge: true });
         } else if (firebaseUser.email === VISITOR_EMAIL) {
-          // Intentar obtener el UID del admin
-          const configRef = doc(db, "public", "admin_config");
-          const snap = await getDoc(configRef);
-          if (snap.exists()) {
-            setTargetUid(snap.data().adminUid);
-          } else {
-            // Fallback al propio UID si el admin no ha entrado nunca (aunque no verá sus datos)
-            setTargetUid(firebaseUser.uid);
+          // Intentar obtener el UID del admin de forma robusta
+          try {
+            const configRef = doc(db, "public", "admin_config");
+            const snap = await getDoc(configRef);
+            if (snap.exists()) {
+              setTargetUid(snap.data().adminUid);
+            } else {
+              setTargetUid(null);
+            }
+          } catch (e) {
+            console.error("Error cargando configuración de admin:", e);
+            setTargetUid(null);
           }
         }
       } else {
