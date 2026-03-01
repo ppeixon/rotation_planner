@@ -406,7 +406,7 @@ export function Dashboard() {
                 onCheckedChange={(checked) => setShowTravelDays(!!checked)}
               />
               <Label htmlFor="toggle-travel" className="text-[10px] font-bold uppercase tracking-tight cursor-pointer">
-                Vuelos
+                TRAVEL DAYS
               </Label>
             </div>
 
