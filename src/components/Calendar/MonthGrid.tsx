@@ -95,28 +95,34 @@ export const MonthGrid = React.memo(function MonthGrid({
               const dayType = event.dayType;
 
               if (dayType === "TRAVEL_EXIT") {
-                if (showClassicTravelDays && showTravelDays) {
+                // Viaje de Salida (Amarillo en clásico, Split Naranja/Azul en moderno)
+                if (showClassicTravelDays) {
                   colorClass = "bg-[#ffff00] text-[#2B1A0A]";
                 } else {
                   colorClass = "day-travel-exit-split";
                 }
               } else if (dayType === "TRAVEL_ENTRY") {
+                // Viaje de Entrada
                 if (!showTravelDays) {
-                  colorClass = "bg-[#c6d9f1] text-[#1e3a8a]";
+                  colorClass = "bg-[#c6d9f1] text-[#1e3a8a]"; // Azul sólido si viajes ocultos
                 } else if (showClassicTravelDays) {
-                  colorClass = "bg-[#3CB371] text-white";
+                  colorClass = "bg-[#3CB371] text-white"; // Verde sólido en clásico
                 } else {
-                  colorClass = "day-travel-entry-split";
+                  colorClass = "day-travel-entry-split"; // Split Azul/Verde en moderno
                 }
               } else if (dayType === "ROTATION") {
                 const prevDateKey = format(subDays(day, 1), "yyyy-MM-dd");
                 const isRotationStart = events[prevDateKey]?.dayType === "TRAVEL_ENTRY";
+                
                 if (isRotationStart) {
                   if (!showTravelDays) {
+                    // Transición directa Azul -> Naranja si viajes ocultos
                     colorClass = "day-rotation-start-hidden-split";
                   } else if (showClassicTravelDays) {
+                    // Naranja sólido en clásico
                     colorClass = "bg-[#ffc000] text-[#2B1A0A]";
                   } else {
+                    // Verde -> Naranja en moderno
                     colorClass = "day-rotation-start-split";
                   }
                 } else {
