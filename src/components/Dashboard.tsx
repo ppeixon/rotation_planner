@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
@@ -79,7 +78,7 @@ const CHART_COLORS: Record<string, string> = {
   TRAVEL_ENTRY: "#3CB371",
   ROTATION: "#ffc000",
   TRAVEL_EXIT: "#ffff00",
-  STANDBY: "#e2e8f0",
+  STANDBY: "#fee2e2",
   NORMAL: "#f4f4f5",
 };
 
@@ -560,12 +559,12 @@ export function Dashboard() {
                   </div>
                   <span className="text-sm font-bold text-[#b8860b]">{stats.TRAVEL_EXIT} d</span>
                 </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#e2e8f0]/20 border border-slate-200">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#fee2e2]/20 border border-red-200">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#e2e8f0]" />
+                    <div className="w-3 h-3 rounded-full bg-[#fee2e2]" />
                     <span className="text-xs font-medium uppercase tracking-tight">Standby</span>
                   </div>
-                  <span className="text-sm font-bold text-slate-700">{stats.STANDBY} d</span>
+                  <span className="text-sm font-bold text-red-700">{stats.STANDBY} d</span>
                 </div>
                 <p className="text-[9px] text-center text-muted-foreground italic pt-1">
                   Haz clic para ver gráfica detallada
@@ -608,7 +607,7 @@ export function Dashboard() {
                         <div className={cn(
                           "w-2.5 h-2.5 rounded-full shrink-0", 
                           block.type === "ROTATION" ? "bg-[#ffc000]" : 
-                          block.type === "VACATION" ? "bg-[#c6d9f1]" : "bg-[#e2e8f0]"
+                          block.type === "VACATION" ? "bg-[#c6d9f1]" : "bg-[#fee2e2]"
                         )} />
                         <div>
                           <p className="font-bold text-foreground group-hover:text-primary transition-colors">

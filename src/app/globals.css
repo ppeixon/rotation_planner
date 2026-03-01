@@ -85,7 +85,7 @@
 }
 
 .day-vacation { background-color: #c6d9f1; color: #1e3a8a; }
-.day-standby { background-color: #e2e8f0; color: #475569; }
+.day-standby { background-color: #fee2e2; color: #991b1b; }
 .day-normal { background-color: transparent; }
 .day-border { border: 1px solid hsl(var(--border)); }
 

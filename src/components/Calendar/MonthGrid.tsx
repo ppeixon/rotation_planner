@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo } from "react";
@@ -43,7 +42,7 @@ const TYPE_COLORS: Record<string, string> = {
   TRAVEL_ENTRY: "day-travel-entry-split",
   TRAVEL_EXIT: "day-travel-exit-split",
   VACATION: "bg-[#c6d9f1] text-[#1e3a8a]",
-  STANDBY: "bg-[#e2e8f0] text-slate-700",
+  STANDBY: "bg-[#fee2e2] text-[#991b1b]",
   NORMAL: "bg-transparent",
 };
 
