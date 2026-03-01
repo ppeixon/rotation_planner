@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -353,7 +352,7 @@ export function Dashboard() {
                   </TooltipProvider>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="max-h-[300px] overflow-y-auto px-4 pb-4 custom-scrollbar">
+              <CardContent className="max-h-[600px] overflow-y-auto px-4 pb-4 custom-scrollbar">
                 <div className="space-y-2">
                   {blocksInYear.map((block, idx) => (
                     <div 
