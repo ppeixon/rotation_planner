@@ -98,8 +98,8 @@ export function Dashboard() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [view, setView] = useState<"annual" | "monthly">("annual");
-  const [showTravelDays, setShowTravelDays] = useState(false);
-  const [showClassicTravelDays, setShowClassicTravelDays] = useState(false);
+  const [showTravelDays, setShowTravelDays] = useState(true);
+  const [showClassicTravelDays, setShowClassicTravelDays] = useState(true);
   const [blockEditorOpen, setBlockEditorOpen] = useState(false);
   const [yearlyStatsDialogOpen, setYearlyStatsDialogOpen] = useState(false);
   const [currentYearStatsDialogOpen, setCurrentYearStatsDialogOpen] = useState(false);
@@ -481,7 +481,7 @@ export function Dashboard() {
                   onCheckedChange={(checked) => setShowClassicTravelDays(!!checked)}
                 />
                 <Label htmlFor="toggle-classic" className="text-[10px] font-bold uppercase tracking-tight cursor-pointer">
-                  CLASSIC TRAVEL DAYS
+                  CLASSIC VIEW TRAVEL DAYS
                 </Label>
               </div>
             )}
