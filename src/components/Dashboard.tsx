@@ -186,23 +186,30 @@ export function Dashboard() {
 
   // Global Stats Year by Year for Historico
   const yearlyStatsBreakdown = useMemo(() => {
-    const years: Record<number, Record<string, number>> = {};
-    const currentYear = new Date().getFullYear();
-    
-    // Find the first year with any data
-    const eventYears = Object.keys(events)
+    const eventKeys = Object.keys(events);
+    const eventYears = eventKeys
       .map(k => parseInt(k.substring(0, 4)))
       .filter(y => !isNaN(y));
+
+    if (eventYears.length === 0) {
+      const currentYear = new Date().getFullYear();
+      return [{
+        year: currentYear.toString(),
+        VACATION: 0, TRAVEL_ENTRY: 0, ROTATION: 0, TRAVEL_EXIT: 0, STANDBY: 0
+      }];
+    }
+
+    const startYear = Math.min(...eventYears);
+    const endYear = Math.max(...eventYears);
     
-    const startYear = eventYears.length > 0 ? Math.min(...eventYears) : currentYear;
-    
-    for (let y = startYear; y <= currentYear + 1; y++) {
+    const years: Record<number, Record<string, number>> = {};
+    for (let y = startYear; y <= endYear; y++) {
       years[y] = { VACATION: 0, TRAVEL_ENTRY: 0, ROTATION: 0, TRAVEL_EXIT: 0, STANDBY: 0 };
     }
 
     Object.entries(events).forEach(([dateKey, event]) => {
       const year = parseInt(dateKey.substring(0, 4));
-      if (year >= startYear && years[year]) {
+      if (years[year]) {
         years[year][event.dayType] = (years[year][event.dayType] || 0) + 1;
       }
     });
