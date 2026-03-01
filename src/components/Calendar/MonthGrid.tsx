@@ -10,11 +10,7 @@ import {
   endOfWeek, 
   eachDayOfInterval, 
   isSameMonth, 
-  isToday,
-  parseISO,
-  isAfter,
-  isBefore,
-  isSameDay
+  isToday
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DayEvent } from "@/lib/types";
@@ -43,7 +39,7 @@ const TYPE_COLORS: Record<string, string> = {
   NORMAL: "bg-transparent",
 };
 
-export function MonthGrid({ 
+export const MonthGrid = React.memo(function MonthGrid({ 
   monthDate, 
   events, 
   mini = false, 
@@ -74,20 +70,18 @@ export function MonthGrid({
           const isCurrentMonth = isSameMonth(day, monthDate);
           const isTodayDay = isToday(day);
 
-          const dayType = event?.dayType === 'TRAVEL' ? 'TRAVEL_ENTRY' : event?.dayType;
+          const dayType = event?.dayType;
           const isTravelDay = dayType === "TRAVEL_ENTRY" || dayType === "TRAVEL_EXIT";
           
-          // Estilos de previsualización de arrastre
           const isDragTarget = dragState?.hoverDate === dateKey;
-          const isAnchor = dragState?.anchorDate === dateKey;
-          const isBeingDragged = dragState?.anchorDate && dragState?.type && isTravelDay && event?.dayType === dragState.type && dateKey === dragState.hoverDate;
+          const isDraggingAny = !!dragState?.isDragging;
 
           const colorClass = event && isCurrentMonth && dayType ? TYPE_COLORS[dayType] : "bg-background";
 
           return (
             <div
               key={dateKey}
-              onClick={() => !dragState?.anchorDate && onDayClick(day)}
+              onClick={() => !isDraggingAny && onDayClick(day)}
               onMouseDown={(e) => {
                 if (isTravelDay && onDayMouseDown) {
                   e.preventDefault();
@@ -102,7 +96,7 @@ export function MonthGrid({
                 colorClass,
                 isTravelDay && !mini && "cursor-grab active:cursor-grabbing",
                 isDragTarget && "ring-2 ring-primary ring-inset z-20",
-                !dragState?.anchorDate && "hover:bg-accent/10 cursor-pointer"
+                !isDraggingAny && "hover:bg-accent/10 cursor-pointer"
               )}
             >
               <span className={cn(
@@ -112,7 +106,7 @@ export function MonthGrid({
                 {format(day, "d")}
               </span>
               
-              {!mini && isCurrentMonth && isTravelDay && !dragState?.anchorDate && (
+              {!mini && isCurrentMonth && isTravelDay && !isDraggingAny && (
                 <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <MoveHorizontal className="w-3 h-3 text-current" />
                 </div>
@@ -136,4 +130,4 @@ export function MonthGrid({
       </div>
     </div>
   );
-}
+});

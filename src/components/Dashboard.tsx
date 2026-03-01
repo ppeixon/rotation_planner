@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRotation } from "@/hooks/useRotation";
 import { MonthGrid } from "./Calendar/MonthGrid";
 import { DayEditor } from "./Calendar/DayEditor";
@@ -50,10 +50,11 @@ import { cn } from "@/lib/utils";
 export function Dashboard() {
   const { user, logout } = useAuth();
   const { events, loading, updateDay, generateRotations, resyncChain } = useRotation();
+  
+  // States
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [view, setView] = useState<"annual" | "monthly">("annual");
-
   const [blockEditorOpen, setBlockEditorOpen] = useState(false);
   const [blockData, setBlockData] = useState<{
     startDate: string;
@@ -61,16 +62,51 @@ export function Dashboard() {
     type: DayType;
   } | null>(null);
 
-  // Estados para Drag & Drop
+  // Drag & Drop States
   const [dragState, setDragState] = useState<{
-    anchorDate: string; // Inicio del bloque base (VAC o ROT)
+    anchorDate: string;
     type: DayType;
     isDragging: boolean;
     initialTravelDate: string;
   } | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
 
-  // Memoize blocks calculation
+  // 1. Calculate stats (Memoized)
+  const stats = useMemo(() => {
+    const periodPrefix = view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "yyyy-MM");
+    const raw = Object.entries(events).reduce((acc, [dateKey, event]) => {
+      if (dateKey.startsWith(periodPrefix)) {
+        acc[event.dayType] = (acc[event.dayType] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    let totalDays = 0;
+    if (view === "monthly") {
+      totalDays = getDaysInMonth(currentDate);
+    } else {
+      const year = currentDate.getFullYear();
+      const isLeap = (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0));
+      totalDays = isLeap ? 366 : 365;
+    }
+
+    const occupied = (raw.ROTATION || 0) + 
+                    (raw.TRAVEL_ENTRY || 0) + 
+                    (raw.TRAVEL_EXIT || 0) + 
+                    (raw.VACATION || 0) +
+                    (raw.STANDBY || 0);
+
+    return {
+      VACATION: raw.VACATION || 0,
+      TRAVEL_ENTRY: raw.TRAVEL_ENTRY || 0,
+      ROTATION: raw.ROTATION || 0,
+      TRAVEL_EXIT: raw.TRAVEL_EXIT || 0,
+      STANDBY: raw.STANDBY || 0,
+      NORMAL: Math.max(0, totalDays - occupied)
+    };
+  }, [events, currentDate, view]);
+
+  // 2. Calculate blocks in year (Memoized)
   const blocksInYear = useMemo(() => {
     const yearStr = format(currentDate, "yyyy");
     const yearEvents = Object.entries(events)
@@ -116,12 +152,11 @@ export function Dashboard() {
       }
     });
     if (currentBlock) blocks.push(currentBlock);
-
     return blocks;
   }, [events, currentDate]);
 
-  // Manejadores de Drag & Drop
-  const handleDayMouseDown = (date: Date, type: string) => {
+  // Handlers (Stable)
+  const handleDayMouseDown = useCallback((date: Date, type: string) => {
     const dateKey = format(date, "yyyy-MM-dd");
     let baseType: DayType;
     
@@ -129,7 +164,7 @@ export function Dashboard() {
     else if (type === "TRAVEL_ENTRY") baseType = "VACATION";
     else return;
 
-    // Encontrar el inicio del bloque base
+    // Find block start
     let start = date;
     let checkDate = subDays(date, 1);
     while (true) {
@@ -147,59 +182,16 @@ export function Dashboard() {
       initialTravelDate: dateKey
     });
     setHoverDate(dateKey);
-  };
+  }, [events]);
 
-  const handleDayMouseEnter = (date: Date) => {
-    if (dragState?.isDragging) {
-      setHoverDate(format(date, "yyyy-MM-dd"));
-    }
-  };
-
-  useEffect(() => {
-    const handleMouseUp = () => {
-      if (dragState?.isDragging && hoverDate && dragState.anchorDate) {
-        const anchor = parseISO(dragState.anchorDate);
-        const target = parseISO(hoverDate);
-        
-        // La nueva duración es la diferencia entre el nuevo día de viaje y el ancla
-        const newDuration = Math.max(1, differenceInDays(target, anchor));
-        
-        if (newDuration !== differenceInDays(parseISO(dragState.initialTravelDate), anchor)) {
-          resyncChain(dragState.anchorDate, newDuration, dragState.type);
-        }
-      }
-      setDragState(null);
-      setHoverDate(null);
-    };
-
-    if (dragState?.isDragging) {
-      window.addEventListener("mouseup", handleMouseUp);
-    }
-    return () => window.removeEventListener("mouseup", handleMouseUp);
-  }, [dragState, hoverDate, resyncChain]);
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-muted-foreground animate-pulse">Sincronizando con la nube...</p>
-      </div>
-    );
-  }
-
-  const handleBlockDoubleClick = (block: { type: DayType; start: string; duration: number }) => {
-    // Para Standby, la duración que pasamos es la total del bloque
-    const effectiveDuration = (block.type === "ROTATION" || block.type === "VACATION") ? block.duration - 1 : block.duration;
-    
-    setBlockData({
-      startDate: block.start,
-      duration: effectiveDuration,
-      type: block.type
+  const handleDayMouseEnter = useCallback((date: Date) => {
+    setHoverDate((prev) => {
+      const next = format(date, "yyyy-MM-dd");
+      return prev === next ? prev : next;
     });
-    setBlockEditorOpen(true);
-  };
+  }, []);
 
-  const handleDayClick = (date: Date) => {
+  const handleDayClick = useCallback((date: Date) => {
     const dateKey = format(date, "yyyy-MM-dd");
     const event = events[dateKey];
 
@@ -251,6 +243,46 @@ export function Dashboard() {
     } else {
       setEditingDate(dateKey);
     }
+  }, [events, view]);
+
+  useEffect(() => {
+    const handleMouseUp = () => {
+      if (dragState?.isDragging && hoverDate && dragState.anchorDate) {
+        const anchor = parseISO(dragState.anchorDate);
+        const target = parseISO(hoverDate);
+        const newDuration = Math.max(1, differenceInDays(target, anchor));
+        
+        if (newDuration !== differenceInDays(parseISO(dragState.initialTravelDate), anchor)) {
+          resyncChain(dragState.anchorDate, newDuration, dragState.type);
+        }
+      }
+      setDragState(null);
+      setHoverDate(null);
+    };
+
+    if (dragState?.isDragging) {
+      window.addEventListener("mouseup", handleMouseUp);
+    }
+    return () => window.removeEventListener("mouseup", handleMouseUp);
+  }, [dragState, hoverDate, resyncChain]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-muted-foreground animate-pulse">Sincronizando con la nube...</p>
+      </div>
+    );
+  }
+
+  const handleBlockDoubleClick = (block: { type: DayType; start: string; duration: number }) => {
+    const effectiveDuration = (block.type === "ROTATION" || block.type === "VACATION") ? block.duration - 1 : block.duration;
+    setBlockData({
+      startDate: block.start,
+      duration: effectiveDuration,
+      type: block.type
+    });
+    setBlockEditorOpen(true);
   };
 
   const next = () => {
@@ -268,39 +300,6 @@ export function Dashboard() {
     end: endOfYear(currentDate),
   });
 
-  const periodPrefix = view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "yyyy-MM");
-  
-  const rawStats = Object.entries(events).reduce((acc, [dateKey, event]) => {
-    if (dateKey.startsWith(periodPrefix)) {
-      acc[event.dayType] = (acc[event.dayType] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
-
-  let totalInPeriod = 0;
-  if (view === "monthly") {
-    totalInPeriod = getDaysInMonth(currentDate);
-  } else {
-    const year = currentDate.getFullYear();
-    const isLeap = (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0));
-    totalInPeriod = isLeap ? 366 : 365;
-  }
-
-  const occupiedDays = (rawStats.ROTATION || 0) + 
-                      (rawStats.TRAVEL_ENTRY || 0) + 
-                      (rawStats.TRAVEL_EXIT || 0) + 
-                      (rawStats.VACATION || 0) +
-                      (rawStats.STANDBY || 0);
-
-  const stats = {
-    VACATION: rawStats.VACATION || 0,
-    TRAVEL_ENTRY: rawStats.TRAVEL_ENTRY || 0,
-    ROTATION: rawStats.ROTATION || 0,
-    TRAVEL_EXIT: rawStats.TRAVEL_EXIT || 0,
-    STANDBY: rawStats.STANDBY || 0,
-    NORMAL: Math.max(0, totalInPeriod - occupiedDays)
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-body">
       <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -309,11 +308,11 @@ export function Dashboard() {
             <div className="bg-primary p-2 rounded-lg">
               <CalendarIcon className="w-5 h-5 text-primary-foreground" />
             </div>
-            <h1 className="font-headline font-bold text-lg hidden lg:block">Algeria Rotation Planner</h1>
+            <h1 className="font-headline font-bold text-lg hidden lg:block tracking-tight">Algeria Rotation Planner</h1>
             <h1 className="font-headline font-bold text-lg lg:hidden">ARP</h1>
           </div>
 
-          <div className="hidden xl:flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-x px-4">
+          <div className="hidden xl:flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-x px-4 h-full">
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-full bg-[#c6d9f1]" /> Vacaciones
             </div>
@@ -488,7 +487,7 @@ export function Dashboard() {
 
             <div className={cn(
               "bg-card border rounded-2xl p-4 sm:p-6 shadow-sm min-h-[500px] transition-all",
-              dragState?.isDragging && "ring-2 ring-primary ring-offset-2"
+              dragState?.isDragging && "ring-2 ring-primary ring-offset-2 ring-inset"
             )}>
               {view === "monthly" ? (
                 <MonthGrid 
