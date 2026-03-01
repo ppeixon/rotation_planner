@@ -15,6 +15,12 @@ import {
 import { cn } from "@/lib/utils";
 import { DayEvent } from "@/lib/types";
 import { Plane, StickyNote, MoveHorizontal } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface MonthGridProps {
   monthDate: Date;
@@ -59,78 +65,100 @@ export const MonthGrid = React.memo(function MonthGrid({
   const weekdayLabels = mini ? ["L", "M", "X", "J", "V", "S", "D"] : ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
   return (
-    <div className="w-full select-none">
-      <div className="grid grid-cols-7 mb-1">
-        {weekdayLabels.map((label) => (
-          <div key={label} className="text-center text-[10px] uppercase font-bold text-muted-foreground py-1">
-            {label}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-px bg-zinc-300 dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 rounded-md overflow-hidden">
-        {days.map((day) => {
-          const dateKey = format(day, "yyyy-MM-dd");
-          const event = events[dateKey];
-          const isCurrentMonth = isSameMonth(day, monthDate);
-          const isTodayDay = isToday(day);
-
-          const dayType = event?.dayType;
-          const isTravelDay = dayType === "TRAVEL_ENTRY" || dayType === "TRAVEL_EXIT";
-          const isDragTarget = isDragging && dragHoverDate === dateKey;
-
-          const colorClass = event && isCurrentMonth && dayType ? TYPE_COLORS[dayType] : "bg-background";
-
-          return (
-            <div
-              key={dateKey}
-              onClick={() => !isDragging && onDayClick(day)}
-              onDoubleClick={() => !isDragging && onDayDoubleClick?.(day)}
-              onMouseDown={(e) => {
-                if (isTravelDay && onDayMouseDown) {
-                  e.preventDefault();
-                  onDayMouseDown(day, dayType!);
-                }
-              }}
-              onMouseEnter={() => isDragging && onDayMouseEnter && onDayMouseEnter(day)}
-              className={cn(
-                "relative bg-background transition-colors duration-75 flex flex-col items-center justify-center group",
-                !isCurrentMonth && "bg-muted/30 text-muted-foreground opacity-50",
-                mini ? "aspect-square py-1" : "aspect-square sm:aspect-auto sm:min-h-[80px] p-1",
-                colorClass,
-                isTravelDay && !mini && "cursor-grab active:cursor-grabbing",
-                isDragTarget && "ring-2 ring-primary ring-inset z-20",
-                !isDragging && "hover:bg-accent/10 cursor-pointer"
-              )}
-            >
-              <span className={cn(
-                "text-xs sm:text-sm font-medium z-10",
-                isTodayDay && "bg-accent text-accent-foreground rounded-full w-6 h-6 flex items-center justify-center"
-              )}>
-                {format(day, "d")}
-              </span>
-              
-              {!mini && isCurrentMonth && isTravelDay && !isDragging && (
-                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <MoveHorizontal className="w-3 h-3 text-current" />
-                </div>
-              )}
-
-              {!mini && isCurrentMonth && event && (
-                <div className="absolute bottom-1 right-1 flex gap-0.5">
-                   {event.flightTicketPurchased && <Plane className={cn("w-3 h-3", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY") ? "text-current fill-current" : "text-white fill-white")} />}
-                   {event.notes && <StickyNote className={cn("w-3 h-3", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY") ? "text-current fill-current" : "text-white fill-white")} />}
-                </div>
-              )}
-
-              {mini && isCurrentMonth && event && (
-                <div className="absolute top-0 right-0 p-0.5">
-                  {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY" || event.dayType === "TRAVEL_ENTRY") ? "bg-current" : "bg-white")} />}
-                </div>
-              )}
+    <TooltipProvider delayDuration={200}>
+      <div className="w-full select-none">
+        <div className="grid grid-cols-7 mb-1">
+          {weekdayLabels.map((label) => (
+            <div key={label} className="text-center text-[10px] uppercase font-bold text-muted-foreground py-1">
+              {label}
             </div>
-          );
-        })}
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-px bg-zinc-300 dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 rounded-md overflow-hidden">
+          {days.map((day) => {
+            const dateKey = format(day, "yyyy-MM-dd");
+            const event = events[dateKey];
+            const isCurrentMonth = isSameMonth(day, monthDate);
+            const isTodayDay = isToday(day);
+
+            const dayType = event?.dayType;
+            const isTravelDay = dayType === "TRAVEL_ENTRY" || dayType === "TRAVEL_EXIT";
+            const isDragTarget = isDragging && dragHoverDate === dateKey;
+
+            const colorClass = event && isCurrentMonth && dayType ? TYPE_COLORS[dayType] : "bg-background";
+
+            const dayContent = (
+              <div
+                onClick={() => !isDragging && onDayClick(day)}
+                onDoubleClick={() => !isDragging && onDayDoubleClick?.(day)}
+                onMouseDown={(e) => {
+                  if (isTravelDay && onDayMouseDown) {
+                    e.preventDefault();
+                    onDayMouseDown(day, dayType!);
+                  }
+                }}
+                onMouseEnter={() => isDragging && onDayMouseEnter && onDayMouseEnter(day)}
+                className={cn(
+                  "relative bg-background transition-colors duration-75 flex flex-col items-center justify-center group",
+                  !isCurrentMonth && "bg-muted/30 text-muted-foreground opacity-50",
+                  mini ? "aspect-square py-1" : "aspect-square sm:aspect-auto sm:min-h-[80px] p-1",
+                  colorClass,
+                  isTravelDay && !mini && "cursor-grab active:cursor-grabbing",
+                  isDragTarget && "ring-2 ring-primary ring-inset z-20",
+                  !isDragging && "hover:bg-accent/10 cursor-pointer"
+                )}
+              >
+                <span className={cn(
+                  "text-xs sm:text-sm font-medium z-10",
+                  isTodayDay && "bg-accent text-accent-foreground rounded-full w-6 h-6 flex items-center justify-center"
+                )}>
+                  {format(day, "d")}
+                </span>
+                
+                {!mini && isCurrentMonth && isTravelDay && !isDragging && (
+                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MoveHorizontal className="w-3 h-3 text-current" />
+                  </div>
+                )}
+
+                {!mini && isCurrentMonth && event && (
+                  <div className="absolute bottom-1 right-1 flex gap-0.5">
+                     {event.flightTicketPurchased && <Plane className={cn("w-3 h-3", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY") ? "text-current fill-current" : "text-white fill-white")} />}
+                     {event.notes && <StickyNote className={cn("w-3 h-3", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY") ? "text-current fill-current" : "text-white fill-white")} />}
+                  </div>
+                )}
+
+                {mini && isCurrentMonth && event && (
+                  <div className="absolute top-0 right-0 p-0.5">
+                    {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY" || event.dayType === "TRAVEL_ENTRY") ? "bg-current" : "bg-white")} />}
+                  </div>
+                )}
+              </div>
+            );
+
+            if (event?.notes && isCurrentMonth) {
+              return (
+                <Tooltip key={dateKey}>
+                  <TooltipTrigger asChild>
+                    {dayContent}
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[200px] break-words p-3 rounded-xl shadow-xl border-primary/20 bg-card">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2 border-b pb-1 mb-1 border-primary/10">
+                        <StickyNote className="w-3 h-3 text-primary" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nota del día</span>
+                      </div>
+                      <p className="text-xs font-medium leading-relaxed">{event.notes}</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
+
+            return <React.Fragment key={dateKey}>{dayContent}</React.Fragment>;
+          })}
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 });
