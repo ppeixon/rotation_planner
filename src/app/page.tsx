@@ -95,7 +95,7 @@ function HomePage() {
                  className="w-full h-14 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
                  disabled={isSubmitting}
                >
-                 {isSubmitting ? "Accediendo..." : "Entrar en RotationVista"}
+                 {isSubmitting ? "Accediendo..." : "Entrar en Argelia Rotation Plan"}
                </Button>
              </form>
 

@@ -16,28 +16,30 @@ import {
 } from "date-fns";
 
 export function useRotation() {
-  const { user, isReadOnly } = useAuth();
+  const { user, isReadOnly, targetUid } = useAuth();
   const db = useFirestore();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [events, setEvents] = useState<Record<string, DayEvent>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !db) {
+    // Si no hay targetUid (o user), no podemos cargar nada
+    if (!targetUid || !user || !db) {
       setSettings(null);
       setEvents({});
       setLoading(false);
       return;
     }
 
-    const settingsRef = doc(db, "users", user.uid, "settings", "profile");
+    const settingsRef = doc(db, "users", targetUid, "settings", "profile");
     const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
       if (docSnap.exists()) {
         setSettings(docSnap.data() as UserSettings);
-      } else if (!isReadOnly) {
+      } else if (!isReadOnly && targetUid === user.uid) {
+        // Solo el dueño puede inicializar sus settings si no existen
         const defaultSettings: UserSettings = {
           id: "profile",
-          userId: user.uid,
+          userId: targetUid,
           startRotationDate: null,
           generateMonthsAhead: 18,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -47,7 +49,7 @@ export function useRotation() {
       }
     });
 
-    const eventsRef = collection(db, "users", user.uid, "dayEvents");
+    const eventsRef = collection(db, "users", targetUid, "dayEvents");
     const unsubEvents = onSnapshot(eventsRef, (querySnap) => {
       const newEvents: Record<string, DayEvent> = {};
       querySnap.forEach((doc) => {
@@ -61,11 +63,11 @@ export function useRotation() {
       unsubSettings();
       unsubEvents();
     };
-  }, [user, db, isReadOnly]);
+  }, [user, targetUid, db, isReadOnly]);
 
   const updateDay = useCallback((dateKey: string, partial: Partial<DayEvent>) => {
-    if (!user || !db || isReadOnly) return;
-    const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
+    if (!user || !db || isReadOnly || !targetUid) return;
+    const dayRef = doc(db, "users", targetUid, "dayEvents", dateKey);
     const existing = events[dateKey];
     
     const newEvent: Partial<DayEvent> = {
@@ -80,11 +82,11 @@ export function useRotation() {
       source: "MANUAL",
       updatedAt: Date.now(),
       updatedBy: user.uid,
-      userId: user.uid,
+      userId: targetUid,
     };
     
     setDocumentNonBlocking(dayRef, newEvent, { merge: true });
-  }, [user, db, events, isReadOnly]);
+  }, [user, targetUid, db, events, isReadOnly]);
 
   const fillRestOfYearBatch = (batch: any, current: Date, state: "VAC" | "TE" | "ROT" | "TX", currentYear: number, endGen: Date, userId: string) => {
     let iterDate = current;
@@ -116,7 +118,7 @@ export function useRotation() {
           const dk = format(iterDate, "yyyy-MM-dd");
           if (events[dk]?.source !== "MANUAL") {
             batch.set(doc(db!, "users", userId, "dayEvents", dk), {
-              id: dk, dateKey: dk, dayType: "VACATION", source: "GENERATED", updatedAt: Date.now(), updatedBy: userId, userId
+              id: dk, dateKey: dk, dayType: "VACATION", source: "GENERATED", updatedAt: Date.now(), updatedBy: user!.uid, userId
             }, { merge: true });
           }
           iterDate = addDays(iterDate, 1);
@@ -127,7 +129,7 @@ export function useRotation() {
           const dk = format(iterDate, "yyyy-MM-dd");
           if (events[dk]?.source !== "MANUAL") {
             batch.set(doc(db!, "users", userId, "dayEvents", dk), {
-              id: dk, dateKey: dk, dayType: "TRAVEL_ENTRY", source: "GENERATED", updatedAt: Date.now(), updatedBy: userId, userId
+              id: dk, dateKey: dk, dayType: "TRAVEL_ENTRY", source: "GENERATED", updatedAt: Date.now(), updatedBy: user!.uid, userId
             }, { merge: true });
           }
           iterDate = addDays(iterDate, 1);
@@ -139,7 +141,7 @@ export function useRotation() {
           const dk = format(iterDate, "yyyy-MM-dd");
           if (events[dk]?.source !== "MANUAL") {
             batch.set(doc(db!, "users", userId, "dayEvents", dk), {
-              id: dk, dateKey: dk, dayType: "ROTATION", source: "GENERATED", updatedAt: Date.now(), updatedBy: userId, userId
+              id: dk, dateKey: dk, dayType: "ROTATION", source: "GENERATED", updatedAt: Date.now(), updatedBy: user!.uid, userId
             }, { merge: true });
           }
           iterDate = addDays(iterDate, 1);
@@ -150,7 +152,7 @@ export function useRotation() {
           const dk = format(iterDate, "yyyy-MM-dd");
           if (events[dk]?.source !== "MANUAL") {
             batch.set(doc(db!, "users", userId, "dayEvents", dk), {
-              id: dk, dateKey: dk, dayType: "TRAVEL_EXIT", source: "GENERATED", updatedAt: Date.now(), updatedBy: userId, userId
+              id: dk, dateKey: dk, dayType: "TRAVEL_EXIT", source: "GENERATED", updatedAt: Date.now(), updatedBy: user!.uid, userId
             }, { merge: true });
           }
           iterDate = addDays(iterDate, 1);
@@ -161,7 +163,7 @@ export function useRotation() {
   };
 
   const generateRotations = useCallback((startDateKey: string, initialType: string, initialDuration: number) => {
-    if (!user || !db || isReadOnly) return;
+    if (!user || !db || isReadOnly || !targetUid) return;
     const batch = writeBatch(db);
     let current = startOfDay(parseISO(startDateKey));
     const currentYear = current.getFullYear();
@@ -171,8 +173,8 @@ export function useRotation() {
     for (let i = 0; i < initialDuration; i++) {
       if (current.getFullYear() !== currentYear) break;
       const dk = format(current, "yyyy-MM-dd");
-      batch.set(doc(db, "users", user.uid, "dayEvents", dk), {
-        id: dk, dateKey: dk, dayType: baseType, source: "GENERATED", updatedAt: Date.now(), updatedBy: user.uid, userId: user.uid
+      batch.set(doc(db, "users", targetUid, "dayEvents", dk), {
+        id: dk, dateKey: dk, dayType: baseType, source: "GENERATED", updatedAt: Date.now(), updatedBy: user.uid, userId: targetUid
       }, { merge: true });
       current = addDays(current, 1);
     }
@@ -184,12 +186,12 @@ export function useRotation() {
     else if (baseType === "TRAVEL_EXIT") nextState = "VAC";
     else nextState = "VAC";
 
-    fillRestOfYearBatch(batch, current, nextState, currentYear, endGen, user.uid);
+    fillRestOfYearBatch(batch, current, nextState, currentYear, endGen, targetUid);
     batch.commit();
-  }, [user, db, events, isReadOnly]);
+  }, [user, targetUid, db, events, isReadOnly]);
 
   const resyncChain = useCallback((anchorDate: string, newDuration: number, type: DayType) => {
-    if (!user || !db || isReadOnly) return;
+    if (!user || !db || isReadOnly || !targetUid) return;
     const batch = writeBatch(db);
     let current = startOfDay(parseISO(anchorDate));
     const currentYear = current.getFullYear();
@@ -198,8 +200,8 @@ export function useRotation() {
     for (let i = 0; i < newDuration; i++) {
       if (current.getFullYear() !== currentYear) break;
       const dk = format(current, "yyyy-MM-dd");
-      batch.set(doc(db, "users", user.uid, "dayEvents", dk), {
-        id: dk, dateKey: dk, dayType: type, source: "GENERATED", updatedAt: Date.now(), updatedBy: user.uid, userId: user.uid
+      batch.set(doc(db, "users", targetUid, "dayEvents", dk), {
+        id: dk, dateKey: dk, dayType: type, source: "GENERATED", updatedAt: Date.now(), updatedBy: user.uid, userId: targetUid
       }, { merge: true });
       current = addDays(current, 1);
     }
@@ -209,25 +211,25 @@ export function useRotation() {
     else if (type === "ROTATION") nextState = "TX";
 
     if (nextState) {
-      fillRestOfYearBatch(batch, current, nextState, currentYear, endGen, user.uid);
+      fillRestOfYearBatch(batch, current, nextState, currentYear, endGen, targetUid);
     }
     
     batch.commit();
-  }, [user, db, events, isReadOnly]);
+  }, [user, targetUid, db, events, isReadOnly]);
 
   const clearYear = useCallback((year: number) => {
-    if (!user || !db || isReadOnly) return;
+    if (!user || !db || isReadOnly || !targetUid) return;
     const batch = writeBatch(db);
     const yearPrefix = year.toString();
     
     Object.keys(events).forEach(dateKey => {
       if (dateKey.startsWith(yearPrefix)) {
-        batch.delete(doc(db, "users", user.uid, "dayEvents", dateKey));
+        batch.delete(doc(db, "users", targetUid, "dayEvents", dateKey));
       }
     });
     
     batch.commit();
-  }, [user, db, events, isReadOnly]);
+  }, [user, targetUid, db, events, isReadOnly]);
 
   return { settings, events, loading, updateDay, generateRotations, resyncChain, clearYear };
 }

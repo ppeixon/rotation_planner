@@ -3,13 +3,15 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { useAuth as useFirebaseAuth } from "@/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { useAuth as useFirebaseAuth, useFirestore } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   isReadOnly: boolean;
+  targetUid: string | null;
   login: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -23,23 +25,43 @@ const VISITOR_PASSWORD = "visitante";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const auth = useFirebaseAuth();
+  const db = useFirestore();
   const [user, setUser] = useState<User | null>(null);
+  const [targetUid, setTargetUid] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const isReadOnly = user?.email === VISITOR_EMAIL;
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser && (firebaseUser.email === ADMIN_EMAIL || firebaseUser.email === VISITOR_EMAIL)) {
         setUser(firebaseUser);
+        
+        if (firebaseUser.email === ADMIN_EMAIL) {
+          setTargetUid(firebaseUser.uid);
+          // Registrar UID del admin para que el visitante pueda encontrarlo
+          const configRef = doc(db, "public", "admin_config");
+          setDoc(configRef, { adminUid: firebaseUser.uid }, { merge: true });
+        } else if (firebaseUser.email === VISITOR_EMAIL) {
+          // Intentar obtener el UID del admin
+          const configRef = doc(db, "public", "admin_config");
+          const snap = await getDoc(configRef);
+          if (snap.exists()) {
+            setTargetUid(snap.data().adminUid);
+          } else {
+            // Fallback al propio UID si el admin no ha entrado nunca (aunque no verá sus datos)
+            setTargetUid(firebaseUser.uid);
+          }
+        }
       } else {
         setUser(null);
+        setTargetUid(null);
       }
       setLoading(false);
     });
     return unsubscribe;
-  }, [auth]);
+  }, [auth, db]);
 
   const login = async (email: string, pass: string) => {
     const cleanEmail = email.trim().toLowerCase();
@@ -90,7 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isReadOnly, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, isReadOnly, targetUid, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
