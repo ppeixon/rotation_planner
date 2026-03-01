@@ -26,11 +26,14 @@ interface BlockEditorProps {
 export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type, onSave }: BlockEditorProps) {
   const [duration, setDuration] = useState(currentDuration);
   const [travelDate, setTravelDate] = useState<Date | undefined>(undefined);
+  const [month, setMonth] = useState<Date>(new Date());
 
   useEffect(() => {
     if (startDate && isOpen) {
       setDuration(currentDuration);
-      setTravelDate(addDays(parseISO(startDate), currentDuration));
+      const initialTravelDate = addDays(parseISO(startDate), currentDuration);
+      setTravelDate(initialTravelDate);
+      setMonth(initialTravelDate);
     }
   }, [currentDuration, startDate, isOpen]);
 
@@ -41,11 +44,13 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
   const handleDurationChange = (val: number) => {
     const newDur = Math.max(1, val);
     setDuration(newDur);
-    setTravelDate(addDays(start, newDur));
+    const newTravelDate = addDays(start, newDur);
+    setTravelDate(newTravelDate);
+    setMonth(newTravelDate);
   };
 
   const handleDateChange = (date: Date | undefined) => {
-    // El usuario selecciona el día de viaje, que es el día inmediatamente posterior al bloque
+    // El usuario selecciona el día de viaje (Salida o Entrada)
     if (date && date > start) {
       setTravelDate(date);
       const newDur = differenceInDays(startOfDay(date), start);
@@ -61,7 +66,7 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
   const isRotation = type === "ROTATION";
   const typeLabel = isRotation ? "Rotación" : "Vacaciones";
   const travelLabel = isRotation ? "Viaje de Salida (Amarillo)" : "Viaje de Entrada (Verde)";
-  const typeColor = isRotation ? "text-[#ffc000]" : "text-[#1e3a8a]";
+  const typeColor = isRotation ? "text-primary" : "text-[#1e3a8a]";
   const travelColor = isRotation ? "text-[#ffff00]" : "text-[#3CB371]";
 
   return (
@@ -82,12 +87,12 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
             <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-2xl border border-muted">
               <CalendarDays className="w-5 h-5 text-muted-foreground" />
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Inicio</p>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Inicio Cadena</p>
                 <p className="text-xs font-semibold">{format(start, "d MMM yyyy", { locale: es })}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-2xl border border-primary/10">
-              <Plane className={cn("w-5 h-5", isRotation ? "text-[#b8860b]" : "text-[#3CB371]")} />
+              <Plane className={cn("w-5 h-5", isRotation ? "text-primary" : "text-[#3CB371]")} />
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{isRotation ? "V. Salida" : "V. Entrada"}</p>
                 <p className="text-xs font-semibold">{travelDate ? format(travelDate, "d MMM yyyy", { locale: es }) : "---"}</p>
@@ -98,7 +103,7 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="duration" className="text-sm font-semibold flex justify-between">
-                Días de {typeLabel}
+                Días de {typeLabel} previos al viaje
                 <span className={cn("font-bold", typeColor)}>{duration} días</span>
               </Label>
               <Input
@@ -131,14 +136,16 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
                     mode="single"
                     selected={travelDate}
                     onSelect={handleDateChange}
+                    month={month}
+                    onMonthChange={setMonth}
                     disabled={(date) => date <= start}
                     initialFocus
                     locale={es}
                   />
                 </PopoverContent>
               </Popover>
-              <p className={cn("text-[10px] font-bold uppercase text-center mt-1", travelColor)}>
-                Este será tu día de {travelLabel}
+              <p className={cn("text-[10px] font-bold uppercase text-center mt-1", isRotation ? "text-[#b8860b]" : "text-[#3CB371]")}>
+                {travelLabel}
               </p>
             </div>
           </div>
@@ -146,7 +153,7 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
           <div className="flex gap-3 p-3 bg-primary/5 border border-primary/10 rounded-xl">
             <Info className="w-5 h-5 text-primary shrink-0" />
             <p className="text-[11px] text-muted-foreground leading-snug">
-              Al guardar, se recalculará automáticamente el resto del año siguiendo el ciclo de 56 días a partir del día siguiente al viaje.
+              Al guardar, el día seleccionado se marcará como <strong>viaje</strong> y se recalculará automáticamente el resto del año siguiendo el ciclo de 56 días.
             </p>
           </div>
         </div>
