@@ -244,16 +244,13 @@ export function Dashboard() {
     if (view === "annual") {
       setCurrentDate(date);
       setView("monthly");
+    } else if (view === "monthly") {
+      setView("annual");
     }
   }, [view]);
 
-  // Unified click handler to solve single/double click conflict in annual view
+  // Unified click handler to solve single/double click conflict
   const onDayClickWrapper = useCallback((date: Date) => {
-    if (view === "monthly") {
-      handleDayClickAction(date);
-      return;
-    }
-
     if (clickTimeoutRef.current) {
       // Second click detected: it's a double click
       clearTimeout(clickTimeoutRef.current);
@@ -266,7 +263,7 @@ export function Dashboard() {
         clickTimeoutRef.current = null;
       }, 250);
     }
-  }, [view, handleDayClickAction, handleDayDoubleClickAction]);
+  }, [handleDayClickAction, handleDayDoubleClickAction]);
 
   useEffect(() => {
     const handleMouseUp = () => {
