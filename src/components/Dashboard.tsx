@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
@@ -10,6 +9,8 @@ import { RotationGenerator } from "./RotationGenerator";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { 
   Dialog, 
   DialogContent, 
@@ -63,7 +64,8 @@ import {
   LogOut,
   BarChart3,
   ListTodo,
-  MousePointer2
+  MousePointer2,
+  Plane
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { DayType } from "@/lib/types";
@@ -93,6 +95,7 @@ export function Dashboard() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [view, setView] = useState<"annual" | "monthly">("annual");
+  const [showTravelDays, setShowTravelDays] = useState(true);
   const [blockEditorOpen, setBlockEditorOpen] = useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = useState(false);
   const [blockData, setBlockData] = useState<{
@@ -299,12 +302,10 @@ export function Dashboard() {
   // Unified click handler to solve single/double click conflict
   const onDayClickWrapper = useCallback((date: Date) => {
     if (clickTimeoutRef.current) {
-      // Second click detected: it's a double click
       clearTimeout(clickTimeoutRef.current);
       clickTimeoutRef.current = null;
       handleDayDoubleClickAction(date);
     } else {
-      // First click: wait to see if a second click arrives
       clickTimeoutRef.current = setTimeout(() => {
         handleDayClickAction(date);
         clickTimeoutRef.current = null;
@@ -397,16 +398,29 @@ export function Dashboard() {
             </div>
           </div>
 
-          <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="hidden md:flex w-auto">
-            <TabsList className="grid grid-cols-2 h-9 w-[200px]">
-              <TabsTrigger value="monthly" className="gap-2">
-                <CalendarIcon className="w-4 h-4" /> Mes
-              </TabsTrigger>
-              <TabsTrigger value="annual" className="gap-2">
-                <LayoutGrid className="w-4 h-4" /> Año
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 border-r h-9">
+              <Checkbox 
+                id="toggle-travel" 
+                checked={showTravelDays} 
+                onCheckedChange={(checked) => setShowTravelDays(!!checked)}
+              />
+              <Label htmlFor="toggle-travel" className="text-[10px] font-bold uppercase tracking-tight cursor-pointer">
+                Vuelos
+              </Label>
+            </div>
+
+            <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="hidden md:flex w-auto">
+              <TabsList className="grid grid-cols-2 h-9 w-[200px]">
+                <TabsTrigger value="monthly" className="gap-2">
+                  <CalendarIcon className="w-4 h-4" /> Mes
+                </TabsTrigger>
+                <TabsTrigger value="annual" className="gap-2">
+                  <LayoutGrid className="w-4 h-4" /> Año
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
           
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => logout()}>
@@ -581,6 +595,7 @@ export function Dashboard() {
                   dragAnchorDate={dragState?.anchorDate}
                   dragHoverDate={hoverDate}
                   isDragging={!!dragState}
+                  showTravelDays={showTravelDays}
                 />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -597,6 +612,7 @@ export function Dashboard() {
                         dragAnchorDate={dragState?.anchorDate}
                         dragHoverDate={hoverDate}
                         isDragging={!!dragState}
+                        showTravelDays={showTravelDays}
                       />
                     </div>
                   ))}

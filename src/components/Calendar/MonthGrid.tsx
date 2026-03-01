@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo } from "react";
@@ -26,6 +25,7 @@ interface MonthGridProps {
   monthDate: Date;
   events: Record<string, DayEvent>;
   mini?: boolean;
+  showTravelDays?: boolean;
   onDayClick: (date: Date) => void;
   onDayDoubleClick?: (date: Date) => void;
   onDayMouseDown?: (date: Date, type: string) => void;
@@ -48,6 +48,7 @@ export const MonthGrid = React.memo(function MonthGrid({
   monthDate, 
   events, 
   mini = false, 
+  showTravelDays = true,
   onDayClick, 
   onDayDoubleClick,
   onDayMouseDown, 
@@ -81,8 +82,11 @@ export const MonthGrid = React.memo(function MonthGrid({
             const isCurrentMonth = isSameMonth(day, monthDate);
             const isTodayDay = isToday(day);
 
-            const dayType = event?.dayType;
-            const isTravelDay = dayType === "TRAVEL_ENTRY" || dayType === "TRAVEL_EXIT";
+            let dayType = event?.dayType;
+            if (!showTravelDays && dayType === "TRAVEL_ENTRY") dayType = "VACATION";
+            if (!showTravelDays && dayType === "TRAVEL_EXIT") dayType = "ROTATION";
+            
+            const isTravelDay = event?.dayType === "TRAVEL_ENTRY" || event?.dayType === "TRAVEL_EXIT";
             const isDragTarget = isDragging && dragHoverDate === dateKey;
 
             const colorClass = event && isCurrentMonth && dayType ? TYPE_COLORS[dayType] : "bg-background";
@@ -94,7 +98,7 @@ export const MonthGrid = React.memo(function MonthGrid({
                 onMouseDown={(e) => {
                   if (isCurrentMonth && isTravelDay && onDayMouseDown) {
                     e.preventDefault();
-                    onDayMouseDown(day, dayType!);
+                    onDayMouseDown(day, event!.dayType);
                   }
                 }}
                 onMouseEnter={() => isCurrentMonth && isDragging && onDayMouseEnter && onDayMouseEnter(day)}
@@ -123,14 +127,14 @@ export const MonthGrid = React.memo(function MonthGrid({
 
                 {isCurrentMonth && !mini && event && (
                   <div className="absolute bottom-1 right-1 flex gap-0.5">
-                     {event.flightTicketPurchased && <Plane className={cn("w-3 h-3", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY") ? "text-current fill-current" : "text-white fill-white")} />}
-                     {event.notes && <StickyNote className={cn("w-3 h-3", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY") ? "text-current fill-current" : "text-white fill-white")} />}
+                     {event.flightTicketPurchased && <Plane className={cn("w-3 h-3", (dayType === "VACATION" || dayType === "ROTATION" || dayType === "TRAVEL_EXIT" || dayType === "STANDBY") ? "text-current fill-current" : "text-white fill-white")} />}
+                     {event.notes && <StickyNote className={cn("w-3 h-3", (dayType === "VACATION" || dayType === "ROTATION" || dayType === "TRAVEL_EXIT" || dayType === "STANDBY") ? "text-current fill-current" : "text-white fill-white")} />}
                   </div>
                 )}
 
                 {isCurrentMonth && mini && event && (
                   <div className="absolute top-0 right-0 p-0.5">
-                    {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY" || event.dayType === "TRAVEL_ENTRY") ? "bg-current" : "bg-white")} />}
+                    {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full", (dayType === "VACATION" || dayType === "ROTATION" || dayType === "TRAVEL_EXIT" || dayType === "STANDBY" || dayType === "TRAVEL_ENTRY") ? "bg-current" : "bg-white")} />}
                   </div>
                 )}
               </div>
