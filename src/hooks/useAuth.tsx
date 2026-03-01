@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDocs, setDoc, collection, query, where, limit } from "firebase/firestore";
 import { useAuth as useFirebaseAuth, useFirestore } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -41,21 +41,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (firebaseUser.email === ADMIN_EMAIL) {
           setTargetUid(firebaseUser.uid);
-          // Registrar UID del admin para que el visitante pueda encontrarlo
-          const configRef = doc(db, "public", "admin_config");
-          await setDoc(configRef, { adminUid: firebaseUser.uid }, { merge: true });
+          // Registrar datos del admin para que el visitante pueda encontrarlo vía query
+          const userRef = doc(db, "users", firebaseUser.uid);
+          await setDoc(userRef, { 
+            id: firebaseUser.uid, 
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName || "Admin",
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
         } else if (firebaseUser.email === VISITOR_EMAIL) {
-          // Intentar obtener el UID del admin de forma robusta
+          // Buscar el UID del administrador por su email
           try {
-            const configRef = doc(db, "public", "admin_config");
-            const snap = await getDoc(configRef);
-            if (snap.exists()) {
-              setTargetUid(snap.data().adminUid);
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("email", "==", ADMIN_EMAIL), limit(1));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+              const adminDoc = querySnapshot.docs[0];
+              setTargetUid(adminDoc.id);
             } else {
+              console.warn("No se encontró el perfil del administrador.");
               setTargetUid(null);
             }
           } catch (e) {
-            console.error("Error cargando configuración de admin:", e);
+            console.error("Error buscando al administrador:", e);
             setTargetUid(null);
           }
         }

@@ -32,14 +32,8 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
-    /** Configuración compartida para mapear emails a UIDs */
-    match /public/admin_config {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.token.email == 'pepe.galan.chiner@gmail.com';
-    }
-
     match /users/{userId} {
-      // El visitante puede leer cualquier perfil de usuario (pero no editarlo)
+      // El visitante puede leer perfiles (necesario para encontrar el UID del admin vía query)
       allow get, list: if isOwner(userId) || isVisitor();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && isImmutable('id');
