@@ -160,7 +160,6 @@ export function Dashboard() {
     const currentYear = new Date().getFullYear();
     const startYear = 2013;
     
-    // Pre-fill years from 2013 to next year
     for (let y = startYear; y <= currentYear + 1; y++) {
       years[y] = { VACATION: 0, TRAVEL_ENTRY: 0, ROTATION: 0, TRAVEL_EXIT: 0, STANDBY: 0 };
     }
@@ -533,7 +532,10 @@ export function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm border-muted flex flex-col h-[calc(100vh-28rem)] min-h-[400px]">
+            <Card className={cn(
+              "shadow-sm border-muted flex flex-col",
+              view === "annual" ? "h-[calc(100vh-28rem)] min-h-[400px]" : "h-auto"
+            )}>
               <CardHeader className="pb-3 shrink-0">
                 <CardTitle className="text-sm font-semibold flex items-center justify-between">
                   <div className="flex items-center gap-2">
