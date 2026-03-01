@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRotation } from "@/hooks/useRotation";
 import { MonthGrid } from "./Calendar/MonthGrid";
 import { DayEditor } from "./Calendar/DayEditor";
@@ -22,18 +22,22 @@ import {
   startOfMonth,
   subDays,
   addDays,
-  getDaysInMonth
+  getDaysInMonth,
+  parseISO
 } from "date-fns";
+import { es } from "date-fns/locale";
 import { 
   ChevronLeft, 
   ChevronRight, 
   LayoutGrid, 
   Calendar as CalendarIcon, 
   LogOut,
-  BarChart3
+  BarChart3,
+  ListTodo
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { DayType } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export function Dashboard() {
   const { user, logout } = useAuth();
@@ -66,7 +70,6 @@ export function Dashboard() {
       let targetType = event?.dayType;
       let targetDate = date;
 
-      // Si pulsamos en un viaje, intentamos asociarlo al bloque anterior para editar la cadena
       if (targetType === "TRAVEL_EXIT") {
         targetType = "ROTATION";
         targetDate = subDays(date, 1);
@@ -79,7 +82,6 @@ export function Dashboard() {
         const typeToFind = targetType as DayType;
         let start = targetDate;
         
-        // Buscar inicio del bloque contiguo del mismo tipo
         let checkDate = subDays(targetDate, 1);
         while (true) {
           const prevKey = format(checkDate, "yyyy-MM-dd");
@@ -89,7 +91,6 @@ export function Dashboard() {
           checkDate = subDays(checkDate, 1);
         }
 
-        // Calcular duración del bloque base (sin contar el viaje)
         let baseDuration = 0;
         let scanDate = start;
         while (true) {
@@ -107,7 +108,6 @@ export function Dashboard() {
         });
         setBlockEditorOpen(true);
       } else {
-        // Otros casos (standby, normal, o viajes aislados) saltan a mensual
         setCurrentDate(date);
         setView("monthly");
       }
@@ -162,6 +162,34 @@ export function Dashboard() {
     STANDBY: Math.max(0, totalInPeriod - occupiedDays)
   };
 
+  const blocksInYear = useMemo(() => {
+    const yearStr = format(currentDate, "yyyy");
+    const yearEvents = Object.entries(events)
+      .filter(([dateKey]) => dateKey.startsWith(yearStr))
+      .sort(([a], [b]) => a.localeCompare(b));
+
+    const blocks: { type: DayType; start: string; duration: number }[] = [];
+    if (yearEvents.length === 0) return blocks;
+
+    let currentBlock: { type: DayType; start: string; duration: number } | null = null;
+
+    yearEvents.forEach(([dateKey, event]) => {
+      if (currentBlock && currentBlock.type === event.dayType) {
+        currentBlock.duration++;
+      } else {
+        if (currentBlock && (currentBlock.type === "ROTATION" || currentBlock.type === "VACATION")) {
+          blocks.push(currentBlock);
+        }
+        currentBlock = { type: event.dayType, start: dateKey, duration: 1 };
+      }
+    });
+    if (currentBlock && (currentBlock.type === "ROTATION" || currentBlock.type === "VACATION")) {
+      blocks.push(currentBlock);
+    }
+
+    return blocks;
+  }, [events, currentDate]);
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-body">
       <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -170,8 +198,26 @@ export function Dashboard() {
             <div className="bg-primary p-2 rounded-lg">
               <CalendarIcon className="w-5 h-5 text-primary-foreground" />
             </div>
-            <h1 className="font-headline font-bold text-lg hidden sm:block">Algeria Rotation Planner</h1>
-            <h1 className="font-headline font-bold text-lg sm:hidden">ARP</h1>
+            <h1 className="font-headline font-bold text-lg hidden lg:block">Algeria Rotation Planner</h1>
+            <h1 className="font-headline font-bold text-lg lg:hidden">ARP</h1>
+          </div>
+
+          <div className="hidden xl:flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-x px-4">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#c6d9f1]" /> Vac
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#3CB371]" /> Ent
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#ffc000]" /> Rot
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#ffff00]" /> Sal
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-slate-300" /> Sby
+            </div>
           </div>
 
           <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="hidden md:flex w-auto">
@@ -248,27 +294,44 @@ export function Dashboard() {
               </CardContent>
             </Card>
 
-            <div className="space-y-2 p-4 bg-muted/20 rounded-2xl border text-[11px] text-muted-foreground leading-tight">
-              <p className="font-bold mb-1 uppercase tracking-wider">Leyenda</p>
-              <div className="grid grid-cols-1 gap-1.5">
-                <div className="flex items-center gap-2">
-                   <div className="w-2.5 h-2.5 rounded-full bg-[#c6d9f1]" />
-                   <span>Azul: Vacaciones (26 días)</span>
+            <Card className="shadow-sm border-muted">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <ListTodo className="w-4 h-4 text-primary" />
+                  Bloques del {format(currentDate, "yyyy")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="max-h-[300px] overflow-y-auto px-4 pb-4 custom-scrollbar">
+                <div className="space-y-2">
+                  {blocksInYear.map((block, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-[11px] py-2 border-b last:border-0 border-muted/50">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-2.5 h-2.5 rounded-full shrink-0", 
+                          block.type === "ROTATION" ? "bg-[#ffc000]" : "bg-[#c6d9f1]"
+                        )} />
+                        <div>
+                          <p className="font-bold text-foreground">
+                            {block.type === "ROTATION" ? "Rotación" : "Vacaciones"}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Inicia: {format(parseISO(block.start), "d MMM", { locale: es })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-muted/30 px-2 py-1 rounded-md">
+                        <span className="font-bold text-primary">{block.duration} d</span>
+                      </div>
+                    </div>
+                  ))}
+                  {blocksInYear.length === 0 && (
+                    <p className="text-[10px] text-muted-foreground text-center py-6 italic">
+                      No hay bloques generados para este año
+                    </p>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                   <div className="w-2.5 h-2.5 rounded-full bg-[#3CB371]" />
-                   <span>Verde: Viaje Entrada (1 día)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                   <div className="w-2.5 h-2.5 rounded-full bg-[#ffc000]" />
-                   <span>Naranja: Rotación (28 días)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                   <div className="w-2.5 h-2.5 rounded-full bg-[#ffff00]" />
-                   <span>Amarillo: Viaje Salida (1 día)</span>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </aside>
 
           <section className="flex-1 space-y-6">
@@ -285,7 +348,7 @@ export function Dashboard() {
                   <ChevronLeft className="w-5 h-5" />
                 </Button>
                 <h2 className="font-headline font-bold text-base min-w-[140px] text-center uppercase tracking-wide">
-                  {view === "monthly" ? format(currentDate, "MMMM yyyy") : format(currentDate, "yyyy")}
+                  {view === "monthly" ? format(currentDate, "MMMM yyyy", { locale: es }) : format(currentDate, "yyyy")}
                 </h2>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={next}>
                   <ChevronRight className="w-5 h-5" />
@@ -304,7 +367,7 @@ export function Dashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {yearMonths.map((m) => (
                     <div key={m.getTime()} className="space-y-3">
-                      <h3 className="text-sm font-bold text-primary pl-1 uppercase tracking-wider">{format(m, "MMMM")}</h3>
+                      <h3 className="text-sm font-bold text-primary pl-1 uppercase tracking-wider">{format(m, "MMMM", { locale: es })}</h3>
                       <MonthGrid 
                         monthDate={m} 
                         events={events} 
@@ -341,6 +404,22 @@ export function Dashboard() {
           <p className="text-xs text-muted-foreground">RotationVista &copy; {new Date().getFullYear()} - Gestión de Rotaciones Argelia</p>
         </div>
       </footer>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: hsl(var(--muted));
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: hsl(var(--muted-foreground));
+        }
+      `}</style>
     </div>
   );
 }
