@@ -37,7 +37,8 @@ import {
   CartesianGrid, 
   XAxis, 
   YAxis,
-  Cell
+  Cell,
+  Legend
 } from "recharts";
 import { 
   format, 
@@ -65,7 +66,8 @@ import {
   BarChart3,
   ListTodo,
   MousePointer2,
-  Globe2
+  Globe2,
+  History
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { DayType } from "@/lib/types";
@@ -95,10 +97,11 @@ export function Dashboard() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [view, setView] = useState<"annual" | "monthly">("annual");
-  const [showTravelDays, setShowTravelDays] = useState(true);
+  const [showTravelDays, setShowTravelDays] = useState(false);
   const [blockEditorOpen, setBlockEditorOpen] = useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = useState(false);
   const [globalStatsDialogOpen, setGlobalStatsDialogOpen] = useState(false);
+  const [yearlyStatsDialogOpen, setYearlyStatsDialogOpen] = useState(false);
   const [blockData, setBlockData] = useState<{
     startDate: string;
     duration: number;
@@ -168,6 +171,30 @@ export function Dashboard() {
       TRAVEL_EXIT: raw.TRAVEL_EXIT || 0,
       STANDBY: raw.STANDBY || 0,
     };
+  }, [events]);
+
+  // Global Stats Year by Year
+  const yearlyStatsBreakdown = useMemo(() => {
+    const years: Record<number, Record<string, number>> = {};
+    const currentYear = new Date().getFullYear();
+    const startYear = 2013;
+    
+    // Pre-fill years from 2013 to next year
+    for (let y = startYear; y <= currentYear + 1; y++) {
+      years[y] = { VACATION: 0, TRAVEL_ENTRY: 0, ROTATION: 0, TRAVEL_EXIT: 0, STANDBY: 0 };
+    }
+
+    Object.entries(events).forEach(([dateKey, event]) => {
+      const year = parseInt(dateKey.substring(0, 4));
+      if (year >= startYear && years[year]) {
+        years[year][event.dayType] = (years[year][event.dayType] || 0) + 1;
+      }
+    });
+
+    return Object.entries(years).map(([year, data]) => ({
+      year,
+      ...data
+    })).sort((a, b) => parseInt(a.year) - parseInt(b.year));
   }, [events]);
 
   const chartData = useMemo(() => [
@@ -591,7 +618,7 @@ export function Dashboard() {
                 </div>
               </div>
 
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
                 <Button 
                   variant="outline" 
                   onClick={() => setGlobalStatsDialogOpen(true)}
@@ -599,6 +626,14 @@ export function Dashboard() {
                 >
                   <Globe2 className="w-4 h-4 text-primary" />
                   Estadísticas Globales
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setYearlyStatsDialogOpen(true)}
+                  className="gap-2 rounded-full border-primary/20 hover:bg-primary/5 hover:border-primary/40 text-xs font-bold uppercase tracking-widest h-10 px-6 transition-all"
+                >
+                  <History className="w-4 h-4 text-primary" />
+                  Histórico Anual
                 </Button>
               </div>
             </div>
@@ -767,6 +802,56 @@ export function Dashboard() {
                 <span className="text-2xl font-black text-foreground">{item.value.toLocaleString()} d</span>
               </div>
             ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Yearly Breakdown Dialog */}
+      <Dialog open={yearlyStatsDialogOpen} onOpenChange={setYearlyStatsDialogOpen}>
+        <DialogContent className="max-w-[95vw] w-full md:max-w-[90vw] h-[90vh] rounded-3xl border-none shadow-2xl flex flex-col p-6 sm:p-10">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-3xl font-bold">
+              <History className="w-8 h-8 text-primary" />
+              Histórico Anual (2013 - Presente)
+            </DialogTitle>
+            <DialogDescription className="text-lg">
+              Evolución detallada de rotaciones, viajes y vacaciones año tras año.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 w-full mt-8 min-h-0 overflow-x-auto">
+            <div className="min-w-[1000px] h-full">
+              <ChartContainer config={chartConfig} className="w-full h-full">
+                <BarChart data={yearlyStatsBreakdown} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                  <XAxis 
+                    dataKey="year" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 12, fontWeight: 700 }}
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 12, fontWeight: 700 }}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Legend verticalAlign="top" height={36}/>
+                  <Bar dataKey="VACATION" name="Vacaciones" stackId="a" fill={CHART_COLORS.VACATION} radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="TRAVEL_ENTRY" name="V. Entrada" stackId="a" fill={CHART_COLORS.TRAVEL_ENTRY} />
+                  <Bar dataKey="ROTATION" name="Rotación" stackId="a" fill={CHART_COLORS.ROTATION} />
+                  <Bar dataKey="TRAVEL_EXIT" name="V. Salida" stackId="a" fill={CHART_COLORS.TRAVEL_EXIT} />
+                  <Bar dataKey="STANDBY" name="Standby" stackId="a" fill={CHART_COLORS.STANDBY} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            </div>
+          </div>
+
+          <div className="mt-4 p-4 bg-muted/20 rounded-2xl border border-muted/50">
+             <p className="text-xs text-muted-foreground text-center italic">
+               * Los datos se calculan sumando todos los eventos registrados en la base de datos para cada año natural.
+             </p>
           </div>
         </DialogContent>
       </Dialog>
