@@ -189,7 +189,13 @@ export function Dashboard() {
   const yearlyStatsBreakdown = useMemo(() => {
     const years: Record<number, Record<string, number>> = {};
     const currentYear = new Date().getFullYear();
-    const startYear = 2013;
+    
+    // Find the first year with any data
+    const eventYears = Object.keys(events)
+      .map(k => parseInt(k.substring(0, 4)))
+      .filter(y => !isNaN(y));
+    
+    const startYear = eventYears.length > 0 ? Math.min(...eventYears) : currentYear;
     
     for (let y = startYear; y <= currentYear + 1; y++) {
       years[y] = { VACATION: 0, TRAVEL_ENTRY: 0, ROTATION: 0, TRAVEL_EXIT: 0, STANDBY: 0 };
@@ -772,7 +778,7 @@ export function Dashboard() {
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2 text-3xl font-bold">
               <History className="w-8 h-8 text-primary" />
-              Histórico Anual (2013 - Presente)
+              Histórico Anual
             </DialogTitle>
             <DialogDescription className="text-lg">
               Evolución detallada de rotaciones, viajes y vacaciones año tras año.
