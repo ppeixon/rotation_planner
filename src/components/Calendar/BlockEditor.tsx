@@ -44,7 +44,7 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
   const isStandby = type === "STANDBY";
 
   const typeLabel = isRotation ? "Rotación" : isVacation ? "Vacaciones" : "Standby";
-  const typeColor = isRotation ? "text-primary" : isVacation ? "text-[#1e3a8a]" : "text-slate-600";
+  const typeColor = isRotation ? "text-primary" : isVacation ? "text-[#1e3a8a]" : "text-[#991b1b]";
   const travelIconColor = isRotation ? "text-[#ffff00]" : "text-[#3CB371]";
 
   return (

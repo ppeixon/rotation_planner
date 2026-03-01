@@ -101,7 +101,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
               <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer col-span-2">
                 <RadioGroupItem value="STANDBY" id="standby" />
                 <Label htmlFor="standby" className="flex items-center gap-2 cursor-pointer text-xs">
-                  <div className="w-3 h-3 rounded-full bg-[#e2e8f0]" />
+                  <div className="w-3 h-3 rounded-full bg-[#fee2e2]" />
                   Standby
                 </Label>
               </div>
