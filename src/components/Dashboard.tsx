@@ -63,40 +63,51 @@ export function Dashboard() {
     const event = events[dateKey];
 
     if (view === "annual") {
-      // Solo abrir editor de bloques para los tipos base: ROTATION o VACATION
-      if (event && (event.dayType === "ROTATION" || event.dayType === "VACATION")) {
-        const targetType = event.dayType;
-        let start = date;
+      let targetType = event?.dayType;
+      let targetDate = date;
+
+      // Si pulsamos en un viaje, intentamos asociarlo al bloque anterior para editar la cadena
+      if (targetType === "TRAVEL_EXIT") {
+        targetType = "ROTATION";
+        targetDate = subDays(date, 1);
+      } else if (targetType === "TRAVEL_ENTRY") {
+        targetType = "VACATION";
+        targetDate = subDays(date, 1);
+      }
+
+      if (targetType === "ROTATION" || targetType === "VACATION") {
+        const typeToFind = targetType as DayType;
+        let start = targetDate;
         
         // Buscar inicio del bloque contiguo del mismo tipo
-        let checkDate = subDays(date, 1);
+        let checkDate = subDays(targetDate, 1);
         while (true) {
           const prevKey = format(checkDate, "yyyy-MM-dd");
           const prevEvent = events[prevKey];
-          if (!prevEvent || prevEvent.dayType !== targetType) break;
+          if (!prevEvent || prevEvent.dayType !== typeToFind) break;
           start = checkDate;
           checkDate = subDays(checkDate, 1);
         }
 
-        // Calcular duración del bloque de ese tipo
-        let finalDuration = 0;
+        // Calcular duración del bloque base (sin contar el viaje)
+        let baseDuration = 0;
         let scanDate = start;
         while (true) {
           const currentKey = format(scanDate, "yyyy-MM-dd");
           const currentEvent = events[currentKey];
-          if (!currentEvent || currentEvent.dayType !== targetType) break;
-          finalDuration++;
+          if (!currentEvent || currentEvent.dayType !== typeToFind) break;
+          baseDuration++;
           scanDate = addDays(scanDate, 1);
         }
 
         setBlockData({
           startDate: format(start, "yyyy-MM-dd"),
-          duration: finalDuration,
-          type: targetType as DayType
+          duration: baseDuration,
+          type: typeToFind
         });
         setBlockEditorOpen(true);
       } else {
-        // Para días de viaje, standby o vacíos, saltar a la vista mensual para edición individual
+        // Otros casos (standby, normal, o viajes aislados) saltan a mensual
         setCurrentDate(date);
         setView("monthly");
       }

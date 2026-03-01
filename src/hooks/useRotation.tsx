@@ -12,8 +12,7 @@ import {
   isBefore, 
   startOfDay, 
   parseISO, 
-  endOfYear,
-  isSameDay
+  endOfYear
 } from "date-fns";
 
 export function useRotation() {
@@ -68,7 +67,6 @@ export function useRotation() {
     if (!user || !db) return;
     
     const existing = events[dateKey];
-    // No sobreescribir si el día fue editado manualmente
     if (source === "GENERATED" && existing?.source === "MANUAL") {
       return;
     }
@@ -109,7 +107,10 @@ export function useRotation() {
     setDocumentNonBlocking(dayRef, newEvent, { merge: true });
   };
 
-  // Máquina de estados para rellenar el ciclo de 56 días
+  /**
+   * Autómata de Ciclo de 56 días:
+   * VAC (26) -> TE (1) -> ROT (28) -> TX (1)
+   */
   const fillRestOfYear = (current: Date, state: "VAC" | "TE" | "ROT" | "TX", currentYear: number, endGen: Date) => {
     let iterDate = current;
     while (iterDate.getFullYear() === currentYear && isBefore(iterDate, addDays(endGen, 1))) {
@@ -151,18 +152,19 @@ export function useRotation() {
     const endGen = endOfYear(current);
 
     // 1. Bloque inicial personalizado
+    const baseType = initialType as DayType;
     for (let i = 0; i < initialDuration; i++) {
       if (current.getFullYear() !== currentYear) break;
-      internalUpdateDay(format(current, "yyyy-MM-dd"), initialType as DayType, "GENERATED");
+      internalUpdateDay(format(current, "yyyy-MM-dd"), baseType, "GENERATED");
       current = addDays(current, 1);
     }
 
-    // 2. Determinar siguiente estado
+    // 2. Determinar siguiente estado del autómata
     let nextState: "VAC" | "TE" | "ROT" | "TX";
-    if (initialType === "VACATION") nextState = "TE";
-    else if (initialType === "TRAVEL_ENTRY") nextState = "ROT";
-    else if (initialType === "ROTATION") nextState = "TX";
-    else if (initialType === "TRAVEL_EXIT") nextState = "VAC";
+    if (baseType === "VACATION") nextState = "TE";
+    else if (baseType === "TRAVEL_ENTRY") nextState = "ROT";
+    else if (baseType === "ROTATION") nextState = "TX";
+    else if (baseType === "TRAVEL_EXIT") nextState = "VAC";
     else nextState = "VAC";
 
     // 3. Rellenar
@@ -176,20 +178,26 @@ export function useRotation() {
     const currentYear = current.getFullYear();
     const endGen = endOfYear(current);
 
-    // 1. Aplicar bloque editado (solo VACATION o ROTATION según UI)
+    // 1. Aplicar el bloque base modificado (los días base antes del viaje)
     for (let i = 0; i < newDuration; i++) {
       if (current.getFullYear() !== currentYear) break;
       internalUpdateDay(format(current, "yyyy-MM-dd"), type, "GENERATED");
       current = addDays(current, 1);
     }
 
-    // 2. Determinar siguiente paso tras el bloque ajustado
+    // 2. Colocar el día de viaje correspondiente y saltar al siguiente estado
     let nextState: "VAC" | "TE" | "ROT" | "TX";
-    if (type === "VACATION") nextState = "TE";
-    else if (type === "ROTATION") nextState = "TX";
-    else return;
+    if (type === "VACATION") {
+      // Después de vacaciones siempre va Viaje de Entrada
+      nextState = "TE";
+    } else if (type === "ROTATION") {
+      // Después de rotación siempre va Viaje de Salida
+      nextState = "TX";
+    } else {
+      return;
+    }
 
-    // 3. Seguir el autómata de 56 días
+    // 3. Continuar el ciclo automático
     fillRestOfYear(current, nextState, currentYear, endGen);
   };
 
