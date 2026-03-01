@@ -118,9 +118,10 @@ export function Dashboard() {
   // Timer for single/double click distinction
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Stats for current view
+  // Stats for current view (Monthly or Annual)
   const stats = useMemo(() => {
-    const periodPrefix = view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "yyyy-MM");
+    const periodPrefix = view === "monthly" ? format(currentDate, "yyyy-MM") : format(currentDate, "yyyy");
+    
     const raw = Object.entries(events).reduce((acc, [dateKey, event]) => {
       if (dateKey.startsWith(periodPrefix)) {
         acc[event.dayType] = (acc[event.dayType] || 0) + 1;
@@ -153,7 +154,7 @@ export function Dashboard() {
     };
   }, [events, currentDate, view]);
 
-  // Global Stats Year by Year
+  // Global Stats Year by Year for Historico
   const yearlyStatsBreakdown = useMemo(() => {
     const years: Record<number, Record<string, number>> = {};
     const currentYear = new Date().getFullYear();
@@ -475,7 +476,7 @@ export function Dashboard() {
                 <CardTitle className="text-sm font-semibold flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-primary" />
-                    Estadísticas {view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "MMM yyyy")}
+                    Estadísticas {view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy", { locale: es })}
                   </div>
                   <TooltipProvider>
                     <Tooltip>
