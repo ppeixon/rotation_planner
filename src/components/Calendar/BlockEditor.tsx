@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -29,46 +29,46 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
   const [month, setMonth] = useState<Date>(new Date());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
+  const start = useMemo(() => (startDate ? startOfDay(parseISO(startDate)) : null), [startDate]);
+
   useEffect(() => {
-    if (startDate && isOpen) {
-      const initialStart = startOfDay(parseISO(startDate));
+    if (start && isOpen) {
       setDuration(currentDuration);
-      const initialTravelDate = addDays(initialStart, currentDuration);
+      const initialTravelDate = addDays(start, currentDuration);
       setTravelDate(initialTravelDate);
       setMonth(initialTravelDate);
     }
-  }, [isOpen, startDate, currentDuration]);
+  }, [isOpen, start, currentDuration]);
 
-  if (!startDate) return null;
-
-  const start = startOfDay(parseISO(startDate));
+  if (!start) return null;
 
   const handleDurationChange = (val: number) => {
     const newDur = Math.max(1, val);
     setDuration(newDur);
     const newTravelDate = addDays(start, newDur);
     setTravelDate(newTravelDate);
+    setMonth(newTravelDate);
   };
 
   const handleDateChange = (date: Date | undefined) => {
-    // El usuario selecciona el día de viaje (Salida o Entrada)
     if (date && date > start) {
       const normalizedDate = startOfDay(date);
       setTravelDate(normalizedDate);
       const newDur = differenceInDays(normalizedDate, start);
       setDuration(newDur);
-      setIsCalendarOpen(false); // Cerramos el calendario al seleccionar para confirmar visualmente
+      setMonth(normalizedDate);
+      setIsCalendarOpen(false);
     }
   };
 
   const handleSave = () => {
-    onSave(startDate, duration, type);
+    onSave(startDate!, duration, type);
     onClose();
   };
 
   const isRotation = type === "ROTATION";
   const typeLabel = isRotation ? "Rotación" : "Vacaciones";
-  const travelLabel = isRotation ? "Viaje de Salida (Amarillo)" : "Viaje de Entrada (Verde)";
+  const travelLabel = isRotation ? "Día de Viaje de Salida (Amarillo)" : "Día de Viaje de Entrada (Verde)";
   const typeColor = isRotation ? "text-primary" : "text-[#1e3a8a]";
 
   return (
@@ -80,7 +80,7 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
             Ajustar Cadena de {typeLabel}
           </DialogTitle>
           <DialogDescription>
-            Modifica este periodo seleccionando el día de viaje en el calendario.
+            Selecciona el día de viaje en el calendario o ajusta la duración manualmente.
           </DialogDescription>
         </DialogHeader>
 
@@ -94,9 +94,9 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-2xl border border-primary/10">
-              <Plane className={cn("w-5 h-5", isRotation ? "text-[#D18C47]" : "text-[#3CB371]")} />
+              <Plane className={cn("w-5 h-5", isRotation ? "text-[#ffff00]" : "text-[#3CB371]")} />
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{isRotation ? "V. Salida" : "V. Entrada"}</p>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{isRotation ? "Viaje Salida" : "Viaje Entrada"}</p>
                 <p className="text-xs font-semibold">{travelDate ? format(travelDate, "d MMM yyyy", { locale: es }) : "---"}</p>
               </div>
             </div>
@@ -138,7 +138,7 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
 
             <div className="space-y-2">
               <Label htmlFor="duration" className="text-sm font-semibold flex justify-between">
-                Días de {typeLabel} calculados
+                Días de {typeLabel}
                 <span className={cn("font-bold", typeColor)}>{duration} días</span>
               </Label>
               <Input
@@ -155,7 +155,7 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
           <div className="flex gap-3 p-3 bg-primary/5 border border-primary/10 rounded-xl">
             <Info className="w-5 h-5 text-primary shrink-0" />
             <p className="text-[11px] text-muted-foreground leading-snug">
-              Al guardar, el día seleccionado será el nuevo hito de viaje y se recalculará el resto del año siguiendo el ciclo de 56 días.
+              Al guardar, el día seleccionado será el nuevo hito de viaje y se recalculará todo el año siguiendo el ciclo de 56 días (28+1 / 26+1).
             </p>
           </div>
         </div>
