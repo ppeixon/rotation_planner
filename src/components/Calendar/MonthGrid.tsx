@@ -14,7 +14,7 @@ import {
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DayEvent } from "@/lib/types";
-import { Plane, StickyNote, MoveHorizontal } from "lucide-react";
+import { Plane, StickyNote, MoveHorizontal, Check } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -94,20 +94,18 @@ export const MonthGrid = React.memo(function MonthGrid({
               const dayType = event.dayType;
 
               if (dayType === "TRAVEL_EXIT") {
-                // Viaje de Salida (Amarillo en clásico, Split Naranja/Azul en moderno)
                 if (showClassicTravelDays) {
                   colorClass = "bg-[#ffff00] text-[#2B1A0A]";
                 } else {
                   colorClass = "day-travel-exit-split";
                 }
               } else if (dayType === "TRAVEL_ENTRY") {
-                // Viaje de Entrada
                 if (!showTravelDays) {
-                  colorClass = "bg-[#c6d9f1] text-[#1e3a8a]"; // Azul sólido si viajes ocultos
+                  colorClass = "bg-[#c6d9f1] text-[#1e3a8a]";
                 } else if (showClassicTravelDays) {
-                  colorClass = "bg-[#3CB371] text-white"; // Verde sólido en clásico
+                  colorClass = "bg-[#3CB371] text-white";
                 } else {
-                  colorClass = "day-travel-entry-split"; // Split Azul/Verde en moderno
+                  colorClass = "day-travel-entry-split";
                 }
               } else if (dayType === "ROTATION") {
                 const prevDateKey = format(subDays(day, 1), "yyyy-MM-dd");
@@ -115,13 +113,10 @@ export const MonthGrid = React.memo(function MonthGrid({
                 
                 if (isRotationStart) {
                   if (!showTravelDays) {
-                    // Transición directa Azul -> Naranja si viajes ocultos
                     colorClass = "day-rotation-start-hidden-split";
                   } else if (showClassicTravelDays) {
-                    // Naranja sólido en clásico
                     colorClass = "bg-[#ffc000] text-[#2B1A0A]";
                   } else {
-                    // Verde -> Naranja en moderno
                     colorClass = "day-rotation-start-split";
                   }
                 } else {
@@ -170,17 +165,36 @@ export const MonthGrid = React.memo(function MonthGrid({
                   </div>
                 )}
 
+                {/* Main View Indicators */}
                 {isCurrentMonth && !mini && event && (
-                  <div className="absolute bottom-1 right-1 flex gap-0.5">
-                     {event.flightTicketPurchased && <Plane className={cn("w-3 h-3", "fill-current")} />}
-                     {event.notes && <StickyNote className={cn("w-3 h-3", "fill-current")} />}
-                  </div>
+                  <>
+                    {event.flightTicketPurchased && (
+                      <div className="absolute bottom-1 left-1 text-current">
+                        <Check className="w-3 h-3 stroke-[3]" />
+                      </div>
+                    )}
+                    {event.notes && (
+                      <div className="absolute bottom-1 right-1 text-current">
+                        <StickyNote className="w-3 h-3 fill-current" />
+                      </div>
+                    )}
+                  </>
                 )}
 
+                {/* Mini View Indicators */}
                 {isCurrentMonth && mini && event && (
-                  <div className="absolute top-0 right-0 p-0.5">
-                    {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full bg-current")} />}
-                  </div>
+                  <>
+                    {event.flightTicketPurchased && (
+                      <div className="absolute bottom-0 left-0 p-0.5 text-current">
+                        <Check className="w-2 h-2 stroke-[4]" />
+                      </div>
+                    )}
+                    {event.notes && (
+                      <div className="absolute bottom-0 right-0 p-0.5">
+                        <div className="w-1 h-1 rounded-full bg-current" />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             );
