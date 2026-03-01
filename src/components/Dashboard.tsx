@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useRotation } from "@/hooks/useRotation";
 import { MonthGrid } from "./Calendar/MonthGrid";
 import { DayEditor } from "./Calendar/DayEditor";
@@ -69,6 +69,9 @@ export function Dashboard() {
     initialTravelDate: string;
   } | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
+
+  // Timer for single/double click distinction
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 1. Hooks first - all data calculations
   const stats = useMemo(() => {
@@ -184,14 +187,7 @@ export function Dashboard() {
     setHoverDate(format(date, "yyyy-MM-dd"));
   }, []);
 
-  const handleDayDoubleClick = useCallback((date: Date) => {
-    if (view === "annual") {
-      setCurrentDate(date);
-      setView("monthly");
-    }
-  }, [view]);
-
-  const handleDayClick = useCallback((date: Date) => {
+  const handleDayClickAction = useCallback((date: Date) => {
     const dateKey = format(date, "yyyy-MM-dd");
     const event = events[dateKey];
 
@@ -243,6 +239,34 @@ export function Dashboard() {
       setEditingDate(dateKey);
     }
   }, [events, view]);
+
+  const handleDayDoubleClickAction = useCallback((date: Date) => {
+    if (view === "annual") {
+      setCurrentDate(date);
+      setView("monthly");
+    }
+  }, [view]);
+
+  // Unified click handler to solve single/double click conflict in annual view
+  const onDayClickWrapper = useCallback((date: Date) => {
+    if (view === "monthly") {
+      handleDayClickAction(date);
+      return;
+    }
+
+    if (clickTimeoutRef.current) {
+      // Second click detected: it's a double click
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+      handleDayDoubleClickAction(date);
+    } else {
+      // First click: wait to see if a second click arrives
+      clickTimeoutRef.current = setTimeout(() => {
+        handleDayClickAction(date);
+        clickTimeoutRef.current = null;
+      }, 250);
+    }
+  }, [view, handleDayClickAction, handleDayDoubleClickAction]);
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -492,7 +516,7 @@ export function Dashboard() {
                 <MonthGrid 
                   monthDate={startOfMonth(currentDate)} 
                   events={events} 
-                  onDayClick={handleDayClick}
+                  onDayClick={onDayClickWrapper}
                   onDayMouseDown={handleDayMouseDown}
                   onDayMouseEnter={handleDayMouseEnter}
                   dragAnchorDate={dragState?.anchorDate}
@@ -508,8 +532,7 @@ export function Dashboard() {
                         monthDate={m} 
                         events={events} 
                         mini 
-                        onDayClick={handleDayClick}
-                        onDayDoubleClick={handleDayDoubleClick}
+                        onDayClick={onDayClickWrapper}
                         onDayMouseDown={handleDayMouseDown}
                         onDayMouseEnter={handleDayMouseEnter}
                         dragAnchorDate={dragState?.anchorDate}
