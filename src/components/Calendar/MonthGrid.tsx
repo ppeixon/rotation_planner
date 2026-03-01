@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo } from "react";
@@ -27,6 +28,7 @@ interface MonthGridProps {
   events: Record<string, DayEvent>;
   mini?: boolean;
   showTravelDays?: boolean;
+  showClassicTravelDays?: boolean;
   onDayClick: (date: Date) => void;
   onDayDoubleClick?: (date: Date) => void;
   onDayMouseDown?: (date: Date, type: string) => void;
@@ -50,6 +52,7 @@ export const MonthGrid = React.memo(function MonthGrid({
   events, 
   mini = false, 
   showTravelDays = true,
+  showClassicTravelDays = false,
   onDayClick, 
   onDayDoubleClick,
   onDayMouseDown, 
@@ -92,18 +95,30 @@ export const MonthGrid = React.memo(function MonthGrid({
               const dayType = event.dayType;
 
               if (dayType === "TRAVEL_EXIT") {
-                // Siempre dividido (naranja/azul) con diagonal 135deg
-                colorClass = "day-travel-exit-split";
+                if (showClassicTravelDays && showTravelDays) {
+                  colorClass = "bg-[#ffff00] text-[#2B1A0A]";
+                } else {
+                  colorClass = "day-travel-exit-split";
+                }
               } else if (dayType === "TRAVEL_ENTRY") {
-                // Dividido azul/verde si visible, azul sólido si oculto (como vacaciones)
-                colorClass = showTravelDays ? "day-travel-entry-split" : "bg-[#c6d9f1] text-[#1e3a8a]";
+                if (!showTravelDays) {
+                  colorClass = "bg-[#c6d9f1] text-[#1e3a8a]";
+                } else if (showClassicTravelDays) {
+                  colorClass = "bg-[#3CB371] text-white";
+                } else {
+                  colorClass = "day-travel-entry-split";
+                }
               } else if (dayType === "ROTATION") {
-                // Detectar inicio de rotación (día después de un viaje de entrada)
                 const prevDateKey = format(subDays(day, 1), "yyyy-MM-dd");
                 const isRotationStart = events[prevDateKey]?.dayType === "TRAVEL_ENTRY";
                 if (isRotationStart) {
-                  // Con vuelos: Verde -> Naranja (135deg). Sin vuelos: Azul -> Naranja (45deg).
-                  colorClass = showTravelDays ? "day-rotation-start-split" : "day-rotation-start-hidden-split";
+                  if (!showTravelDays) {
+                    colorClass = "day-rotation-start-hidden-split";
+                  } else if (showClassicTravelDays) {
+                    colorClass = "bg-[#ffc000] text-[#2B1A0A]";
+                  } else {
+                    colorClass = "day-rotation-start-split";
+                  }
                 } else {
                   colorClass = TYPE_COLORS.ROTATION;
                 }

@@ -97,6 +97,7 @@ export function Dashboard() {
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [view, setView] = useState<"annual" | "monthly">("annual");
   const [showTravelDays, setShowTravelDays] = useState(false);
+  const [showClassicTravelDays, setShowClassicTravelDays] = useState(false);
   const [blockEditorOpen, setBlockEditorOpen] = useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = useState(false);
   const [yearlyStatsDialogOpen, setYearlyStatsDialogOpen] = useState(false);
@@ -417,6 +418,17 @@ export function Dashboard() {
               </Label>
             </div>
 
+            <div className="flex items-center gap-2 px-3 border-r h-9">
+              <Checkbox 
+                id="toggle-classic" 
+                checked={showClassicTravelDays} 
+                onCheckedChange={(checked) => setShowClassicTravelDays(!!checked)}
+              />
+              <Label htmlFor="toggle-classic" className="text-[10px] font-bold uppercase tracking-tight cursor-pointer">
+                CLASSIC TRAVEL DAYS
+              </Label>
+            </div>
+
             <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="hidden md:flex w-auto">
               <TabsList className="grid grid-cols-2 h-9 w-[200px]">
                 <TabsTrigger value="monthly" className="gap-2">
@@ -616,6 +628,7 @@ export function Dashboard() {
                   dragHoverDate={hoverDate}
                   isDragging={!!dragState}
                   showTravelDays={showTravelDays}
+                  showClassicTravelDays={showClassicTravelDays}
                 />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -633,6 +646,7 @@ export function Dashboard() {
                         dragHoverDate={hoverDate}
                         isDragging={!!dragState}
                         showTravelDays={showTravelDays}
+                        showClassicTravelDays={showClassicTravelDays}
                       />
                     </div>
                   ))}
