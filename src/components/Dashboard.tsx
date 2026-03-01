@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
@@ -431,7 +432,6 @@ export function Dashboard() {
     const activeIndex = data.activeTooltipIndex;
     
     if (now - lastChartClickRef.current.time < 300 && lastChartClickRef.current.index === activeIndex) {
-      // Double click detected on a bar
       const year = data.activePayload[0].payload.year;
       const newDate = new Date(parseInt(year), 0, 1);
       setCurrentDate(newDate);
