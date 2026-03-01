@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -122,7 +121,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="flightInfo" className="text-sm">Info de vuelo / PNR</Label>
+                <Label htmlFor="flightInfo" className="text-sm">Travel Ticket Info</Label>
                 <Input
                   id="flightInfo"
                   placeholder="Vuelo AH2004, 15:30h..."
