@@ -11,11 +11,33 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription 
+} from "@/components/ui/dialog";
+import { 
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { 
+  ChartContainer, 
+  ChartTooltip, 
+  ChartTooltipContent,
+  type ChartConfig 
+} from "@/components/ui/chart";
+import { 
+  Bar, 
+  BarChart, 
+  CartesianGrid, 
+  XAxis, 
+  YAxis,
+  ResponsiveContainer,
+  Cell
+} from "recharts";
 import { 
   format, 
   addMonths, 
@@ -47,6 +69,22 @@ import { useAuth } from "@/hooks/useAuth";
 import { DayType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+const CHART_COLORS: Record<string, string> = {
+  VACATION: "#c6d9f1",
+  TRAVEL_ENTRY: "#3CB371",
+  ROTATION: "#ffc000",
+  TRAVEL_EXIT: "#ffff00",
+  STANDBY: "#e2e8f0",
+  NORMAL: "#f4f4f5",
+};
+
+const chartConfig = {
+  days: {
+    label: "Días",
+    color: "hsl(var(--primary))",
+  },
+} satisfies ChartConfig;
+
 export function Dashboard() {
   const { user, logout } = useAuth();
   const { events, loading, updateDay, generateRotations, resyncChain } = useRotation();
@@ -56,6 +94,7 @@ export function Dashboard() {
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [view, setView] = useState<"annual" | "monthly">("annual");
   const [blockEditorOpen, setBlockEditorOpen] = useState(false);
+  const [statsDialogOpen, setStatsDialogOpen] = useState(false);
   const [blockData, setBlockData] = useState<{
     startDate: string;
     duration: number;
@@ -107,6 +146,14 @@ export function Dashboard() {
       NORMAL: Math.max(0, totalDays - occupied)
     };
   }, [events, currentDate, view]);
+
+  const chartData = useMemo(() => [
+    { name: "Vacaciones", value: stats.VACATION, type: "VACATION" },
+    { name: "V. Entrada", value: stats.TRAVEL_ENTRY, type: "TRAVEL_ENTRY" },
+    { name: "Rotación", value: stats.ROTATION, type: "ROTATION" },
+    { name: "V. Salida", value: stats.TRAVEL_EXIT, type: "TRAVEL_EXIT" },
+    { name: "Standby", value: stats.STANDBY, type: "STANDBY" },
+  ], [stats]);
 
   const blocksInYear = useMemo(() => {
     const yearStr = format(currentDate, "yyyy");
@@ -378,11 +425,26 @@ export function Dashboard() {
               defaultDate={format(startOfYear(currentDate), "yyyy-01-01")}
             />
             
-            <Card className="shadow-sm border-muted">
+            <Card 
+              className="shadow-sm border-muted cursor-pointer hover:bg-muted/5 transition-colors select-none"
+              onDoubleClick={() => setStatsDialogOpen(true)}
+            >
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-primary" />
-                  Estadísticas {view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "MMM yyyy")}
+                <CardTitle className="text-sm font-semibold flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-primary" />
+                    Estadísticas {view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "MMM yyyy")}
+                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <MousePointer2 className="w-3 h-3 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-[10px]">Doble clic para ver gráfica</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -560,6 +622,60 @@ export function Dashboard() {
         type={blockData?.type || "ROTATION"}
         onSave={resyncChain}
       />
+
+      <Dialog open={statsDialogOpen} onOpenChange={setStatsDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] rounded-3xl border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+              <BarChart3 className="w-6 h-6 text-primary" />
+              Distribución de Días
+            </DialogTitle>
+            <DialogDescription>
+              Resumen visual para {view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy", { locale: es })}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="h-[300px] w-full mt-6">
+            <ChartContainer config={chartConfig}>
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 600 }}
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 600 }}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar 
+                  dataKey="value" 
+                  radius={[8, 8, 0, 0]} 
+                  barSize={40}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[entry.type]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+          </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+            {chartData.map((item) => (
+              <div key={item.type} className="flex items-center gap-2 p-2 rounded-xl bg-muted/30 border border-muted/50">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CHART_COLORS[item.type] }} />
+                <span className="text-[10px] font-bold uppercase text-muted-foreground">{item.name}</span>
+                <span className="ml-auto text-xs font-black">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <footer className="py-6 border-t bg-muted/20 mt-12">
         <div className="container mx-auto px-4 text-center">
