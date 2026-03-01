@@ -129,7 +129,7 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
             <Info className="w-5 h-5 text-primary shrink-0" />
             <p className="text-[11px] text-muted-foreground leading-relaxed">
               {isStandby 
-                ? `Al guardar, se establecerán ${duration} días de standby y se reanudará el ciclo normal de rotaciones a partir de la fecha de finalización.`
+                ? `Al guardar, se establecerán ${duration} días de standby. El resto de las rotaciones y cadenas de días posteriores no se verán afectadas.`
                 : `Al guardar, se establecerá el día de viaje justo después de los ${duration} días de ${typeLabel.toLowerCase()} y se recalculará el resto del año siguiendo tu ciclo de 56 días.`
               }
             </p>

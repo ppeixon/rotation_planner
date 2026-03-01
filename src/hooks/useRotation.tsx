@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -203,13 +204,15 @@ export function useRotation() {
       current = addDays(current, 1);
     }
 
-    let nextState: "VAC" | "TE" | "ROT" | "TX";
+    let nextState: "VAC" | "TE" | "ROT" | "TX" | null = null;
     if (type === "VACATION") nextState = "TE";
     else if (type === "ROTATION") nextState = "TX";
-    else if (type === "STANDBY") nextState = "VAC";
-    else return;
+    // For STANDBY we do NOT set nextState, so fillRestOfYearBatch is not called
 
-    fillRestOfYearBatch(batch, current, nextState, currentYear, endGen, user.uid);
+    if (nextState) {
+      fillRestOfYearBatch(batch, current, nextState, currentYear, endGen, user.uid);
+    }
+    
     batch.commit();
   }, [user, db, events]);
 
