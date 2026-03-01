@@ -186,18 +186,18 @@ export function Dashboard() {
     { name: "Standby", value: stats.STANDBY, type: "STANDBY" },
   ], [stats]);
 
-  const blocksInYear = useMemo(() => {
-    const yearStr = format(currentDate, "yyyy");
-    const yearEvents = Object.entries(events)
-      .filter(([dateKey]) => dateKey.startsWith(yearStr))
+  const blocksInPeriod = useMemo(() => {
+    const periodPrefix = view === "monthly" ? format(currentDate, "yyyy-MM") : format(currentDate, "yyyy");
+    const periodEvents = Object.entries(events)
+      .filter(([dateKey]) => dateKey.startsWith(periodPrefix))
       .sort(([a], [b]) => a.localeCompare(b));
 
     const blocks: { type: DayType; start: string; duration: number }[] = [];
-    if (yearEvents.length === 0) return blocks;
+    if (periodEvents.length === 0) return blocks;
 
     let currentBlock: { type: DayType; start: string; duration: number } | null = null;
 
-    yearEvents.forEach(([dateKey, event]) => {
+    periodEvents.forEach(([dateKey, event]) => {
       const type = event.dayType;
       
       if (type === "VACATION" || type === "ROTATION" || type === "STANDBY") {
@@ -232,7 +232,7 @@ export function Dashboard() {
     });
     if (currentBlock) blocks.push(currentBlock);
     return blocks;
-  }, [events, currentDate]);
+  }, [events, currentDate, view]);
 
   // Handlers
   const handleDayMouseDown = useCallback((date: Date, type: string) => {
@@ -395,6 +395,8 @@ export function Dashboard() {
     end: endOfYear(currentDate),
   });
 
+  const periodLabel = view === "monthly" ? format(currentDate, "MMMM yyyy", { locale: es }) : format(currentDate, "yyyy");
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-body">
       <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -462,11 +464,13 @@ export function Dashboard() {
         <div className="flex flex-col md:flex-row gap-8">
           
           <aside className="w-full md:w-80 space-y-6 shrink-0">
-            <RotationGenerator 
-              onGenerate={generateRotations} 
-              onClearYear={clearYear}
-              defaultDate={format(startOfYear(currentDate), "yyyy-01-01")}
-            />
+            {view === "annual" && (
+              <RotationGenerator 
+                onGenerate={generateRotations} 
+                onClearYear={clearYear}
+                defaultDate={format(startOfYear(currentDate), "yyyy-01-01")}
+              />
+            )}
             
             <Card 
               className="shadow-sm border-muted cursor-pointer hover:bg-muted/5 transition-colors select-none"
@@ -476,7 +480,7 @@ export function Dashboard() {
                 <CardTitle className="text-sm font-semibold flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-primary" />
-                    Estadísticas {view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy", { locale: es })}
+                    Estadísticas {periodLabel}
                   </div>
                   <TooltipProvider>
                     <Tooltip>
@@ -534,7 +538,7 @@ export function Dashboard() {
                 <CardTitle className="text-sm font-semibold flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <ListTodo className="w-4 h-4 text-primary" />
-                    Bloques del {format(currentDate, "yyyy")}
+                    Bloques de {periodLabel}
                   </div>
                   <TooltipProvider>
                     <Tooltip>
@@ -550,7 +554,7 @@ export function Dashboard() {
               </CardHeader>
               <CardContent className="overflow-y-auto px-4 pb-4 flex-1 custom-scrollbar">
                 <div className="space-y-2">
-                  {blocksInYear.map((block, idx) => (
+                  {blocksInPeriod.map((block, idx) => (
                     <div 
                       key={idx} 
                       className="flex items-center justify-between text-[11px] py-2 border-b last:border-0 border-muted/50 cursor-pointer hover:bg-muted/10 transition-colors group rounded-lg px-2"
@@ -578,9 +582,9 @@ export function Dashboard() {
                       </div>
                     </div>
                   ))}
-                  {blocksInYear.length === 0 && (
+                  {blocksInPeriod.length === 0 && (
                     <p className="text-[10px] text-muted-foreground text-center py-6 italic">
-                      No hay bloques generados para este año
+                      No hay bloques registrados para este periodo
                     </p>
                   )}
                 </div>
@@ -603,7 +607,7 @@ export function Dashboard() {
                     <ChevronLeft className="w-5 h-5" />
                   </Button>
                   <h2 className="font-headline font-bold text-base min-w-[140px] text-center uppercase tracking-wide">
-                    {view === "monthly" ? format(currentDate, "MMMM yyyy", { locale: es }) : format(currentDate, "yyyy")}
+                    {periodLabel}
                   </h2>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={next}>
                     <ChevronRight className="w-5 h-5" />
@@ -611,16 +615,18 @@ export function Dashboard() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setYearlyStatsDialogOpen(true)}
-                  className="gap-2 rounded-full border-primary/20 hover:bg-primary/5 hover:border-primary/40 text-xs font-bold uppercase tracking-widest h-10 px-6 transition-all"
-                >
-                  <History className="w-4 h-4 text-primary" />
-                  Histórico Anual
-                </Button>
-              </div>
+              {view === "annual" && (
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setYearlyStatsDialogOpen(true)}
+                    className="gap-2 rounded-full border-primary/20 hover:bg-primary/5 hover:border-primary/40 text-xs font-bold uppercase tracking-widest h-10 px-6 transition-all"
+                  >
+                    <History className="w-4 h-4 text-primary" />
+                    Histórico Anual
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className={cn(
@@ -692,7 +698,7 @@ export function Dashboard() {
               Distribución de Días
             </DialogTitle>
             <DialogDescription className="text-lg">
-              Resumen visual para {view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy", { locale: es })}.
+              Resumen visual para {periodLabel}.
             </DialogDescription>
           </DialogHeader>
           
