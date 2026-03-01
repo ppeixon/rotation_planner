@@ -21,16 +21,17 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { RefreshCw, Play, CalendarRange } from "lucide-react";
-import { format } from "date-fns";
+import { RefreshCw, Play, CalendarRange, Trash2 } from "lucide-react";
+import { format, parseISO } from "date-fns";
 
 interface RotationGeneratorProps {
   onGenerate: (startDateKey: string, initialType: string, initialDuration: number) => void;
+  onClearYear: (year: number) => void;
   isGenerating?: boolean;
   defaultDate?: string;
 }
 
-export function RotationGenerator({ onGenerate, isGenerating, defaultDate }: RotationGeneratorProps) {
+export function RotationGenerator({ onGenerate, onClearYear, isGenerating, defaultDate }: RotationGeneratorProps) {
   const [startDate, setStartDate] = useState(defaultDate || format(new Date(), "yyyy-MM-dd"));
   const [initialType, setInitialType] = useState<string>("ROTATION");
   const [initialDuration, setInitialDuration] = useState<number>(28);
@@ -44,6 +45,12 @@ export function RotationGenerator({ onGenerate, isGenerating, defaultDate }: Rot
 
   const handleGenerate = () => {
     onGenerate(startDate, initialType, initialDuration);
+    setOpen(false);
+  };
+
+  const handleClear = () => {
+    const year = parseISO(startDate).getFullYear();
+    onClearYear(year);
     setOpen(false);
   };
 
@@ -105,16 +112,28 @@ export function RotationGenerator({ onGenerate, isGenerating, defaultDate }: Rot
             />
           </div>
         </div>
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="ghost" onClick={() => setOpen(false)} className="rounded-xl">Cancelar</Button>
-          <Button 
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="gap-2 rounded-xl px-6"
-          >
-            {isGenerating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            Generar Calendario
-          </Button>
+        <DialogFooter className="flex flex-col sm:flex-row gap-2">
+          <div className="flex-1 flex justify-start">
+            <Button 
+              variant="destructive" 
+              onClick={handleClear}
+              className="gap-2 rounded-xl w-full sm:w-auto"
+            >
+              <Trash2 className="w-4 h-4" />
+              Borrar Año
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => setOpen(false)} className="rounded-xl">Cancelar</Button>
+            <Button 
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="gap-2 rounded-xl px-6"
+            >
+              {isGenerating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              Generar
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

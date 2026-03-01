@@ -90,7 +90,7 @@ const chartConfig = {
 
 export function Dashboard() {
   const { user, logout } = useAuth();
-  const { events, loading, updateDay, generateRotations, resyncChain } = useRotation();
+  const { events, loading, updateDay, generateRotations, resyncChain, clearYear } = useRotation();
   
   // States
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -457,6 +457,7 @@ export function Dashboard() {
           <aside className="w-full md:w-80 space-y-6 shrink-0">
             <RotationGenerator 
               onGenerate={generateRotations} 
+              onClearYear={clearYear}
               defaultDate={format(startOfYear(currentDate), "yyyy-01-01")}
             />
             

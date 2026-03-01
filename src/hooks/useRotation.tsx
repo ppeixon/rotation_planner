@@ -214,5 +214,19 @@ export function useRotation() {
     batch.commit();
   }, [user, db, events]);
 
-  return { settings, events, loading, updateDay, generateRotations, resyncChain };
+  const clearYear = useCallback((year: number) => {
+    if (!user || !db) return;
+    const batch = writeBatch(db);
+    const yearPrefix = year.toString();
+    
+    Object.keys(events).forEach(dateKey => {
+      if (dateKey.startsWith(yearPrefix)) {
+        batch.delete(doc(db, "users", user.uid, "dayEvents", dateKey));
+      }
+    });
+    
+    batch.commit();
+  }, [user, db, events]);
+
+  return { settings, events, loading, updateDay, generateRotations, resyncChain, clearYear };
 }
