@@ -107,6 +107,8 @@ export const MonthGrid = React.memo(function MonthGrid({
                 } else {
                   colorClass = "day-travel-entry-split";
                 }
+              } else if (dayType === "TRAVEL_ENTRY") {
+                 // Fallback color handled by split
               } else if (dayType === "ROTATION") {
                 const prevDateKey = format(subDays(day, 1), "yyyy-MM-dd");
                 const isRotationStart = events[prevDateKey]?.dayType === "TRAVEL_ENTRY";
@@ -199,14 +201,18 @@ export const MonthGrid = React.memo(function MonthGrid({
               </div>
             );
 
-            if (isCurrentMonth && event?.notes) {
+            // Conditional tooltip for days with notes or purchased ticket
+            const showTooltip = isCurrentMonth && (event?.notes || event?.flightTicketPurchased);
+            
+            if (showTooltip) {
+              const tooltipText = event?.notes || "Ticket OK";
               return (
                 <Tooltip key={dateKey}>
                   <TooltipTrigger asChild>
                     {dayContent}
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-[200px] break-words p-3 rounded-xl shadow-xl border-primary/20 bg-card">
-                    <p className="text-xs font-medium leading-relaxed">{event.notes}</p>
+                    <p className="text-xs font-medium leading-relaxed">{tooltipText}</p>
                   </TooltipContent>
                 </Tooltip>
               );
