@@ -60,7 +60,10 @@
 }
 
 .day-rotation { background-color: #ffc000; color: #2B1A0A; }
-.day-travel-entry { background-color: #3CB371; color: white; }
+.day-travel-entry-split { 
+  background: linear-gradient(45deg, #c6d9f1 50%, #3CB371 50%); 
+  color: white; 
+}
 .day-travel-exit-split { 
   background: linear-gradient(135deg, #ffc000 50%, #c6d9f1 50%); 
   color: #2B1A0A; 

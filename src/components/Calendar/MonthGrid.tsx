@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo } from "react";
@@ -37,7 +38,7 @@ interface MonthGridProps {
 
 const TYPE_COLORS: Record<string, string> = {
   ROTATION: "bg-[#ffc000] text-[#2B1A0A]",
-  TRAVEL_ENTRY: "bg-[#3CB371] text-white",
+  TRAVEL_ENTRY: "day-travel-entry-split",
   TRAVEL_EXIT: "day-travel-exit-split",
   VACATION: "bg-[#c6d9f1] text-[#1e3a8a]",
   STANDBY: "bg-[#e2e8f0] text-slate-700",
