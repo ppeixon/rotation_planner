@@ -83,22 +83,36 @@ export const MonthGrid = React.memo(function MonthGrid({
             const isCurrentMonth = isSameMonth(day, monthDate);
             const isTodayDay = isToday(day);
 
-            let dayType = event?.dayType;
-            if (!showTravelDays && dayType === "TRAVEL_ENTRY") dayType = "VACATION";
-            if (!showTravelDays && dayType === "TRAVEL_EXIT") dayType = "ROTATION";
-            
             const isTravelDay = event?.dayType === "TRAVEL_ENTRY" || event?.dayType === "TRAVEL_EXIT";
             const isDragTarget = isDragging && dragHoverDate === dateKey;
 
-            // Lógica para detectar el primer día de rotación tras un viaje de entrada
-            const prevDateKey = format(subDays(day, 1), "yyyy-MM-dd");
-            const isRotationStart = event?.dayType === "ROTATION" && events[prevDateKey]?.dayType === "TRAVEL_ENTRY";
-
-            let colorClass = event && isCurrentMonth && dayType ? TYPE_COLORS[dayType] : "bg-background text-background";
+            let colorClass = "bg-background text-background";
             
-            // Aplicar clase especial si es el inicio de la rotación
-            if (isRotationStart && isCurrentMonth && showTravelDays) {
-              colorClass = "day-rotation-start-split";
+            if (event && isCurrentMonth) {
+              const dayType = event.dayType;
+
+              if (dayType === "TRAVEL_EXIT") {
+                // Siempre dividido (naranja/azul) según solicitud
+                colorClass = "day-travel-exit-split";
+              } else if (dayType === "TRAVEL_ENTRY") {
+                // Dividido azul/verde si visible, azul/naranja si oculto
+                colorClass = showTravelDays ? "day-travel-entry-split" : "day-travel-entry-to-rotation-split";
+              } else if (dayType === "ROTATION") {
+                // Detectar inicio de rotación para degradado verde/naranja (solo si visible)
+                const prevDateKey = format(subDays(day, 1), "yyyy-MM-dd");
+                const isRotationStart = events[prevDateKey]?.dayType === "TRAVEL_ENTRY";
+                if (isRotationStart && showTravelDays) {
+                  colorClass = "day-rotation-start-split";
+                } else {
+                  colorClass = TYPE_COLORS.ROTATION;
+                }
+              } else if (dayType === "VACATION") {
+                colorClass = TYPE_COLORS.VACATION;
+              } else if (dayType === "STANDBY") {
+                colorClass = TYPE_COLORS.STANDBY;
+              } else {
+                colorClass = "bg-transparent";
+              }
             }
 
             const dayContent = (
@@ -114,7 +128,7 @@ export const MonthGrid = React.memo(function MonthGrid({
                 onMouseEnter={() => isCurrentMonth && isDragging && onDayMouseEnter && onDayMouseEnter(day)}
                 className={cn(
                   "relative transition-colors duration-75 flex flex-col items-center justify-center group",
-                  !isCurrentMonth ? "bg-background text-background pointer-events-none" : cn("bg-background", colorClass),
+                  !isCurrentMonth ? "bg-background text-background pointer-events-none" : colorClass,
                   mini ? "aspect-square py-1" : "aspect-square sm:aspect-auto sm:min-h-[80px] p-1",
                   isCurrentMonth && isTravelDay && !mini && "cursor-grab active:cursor-grabbing",
                   isCurrentMonth && isDragTarget && "ring-2 ring-primary ring-inset z-20",
@@ -137,14 +151,14 @@ export const MonthGrid = React.memo(function MonthGrid({
 
                 {isCurrentMonth && !mini && event && (
                   <div className="absolute bottom-1 right-1 flex gap-0.5">
-                     {event.flightTicketPurchased && <Plane className={cn("w-3 h-3", (dayType === "VACATION" || dayType === "ROTATION" || dayType === "TRAVEL_EXIT" || dayType === "STANDBY" || isRotationStart) ? "text-current fill-current" : "text-white fill-white")} />}
-                     {event.notes && <StickyNote className={cn("w-3 h-3", (dayType === "VACATION" || dayType === "ROTATION" || dayType === "TRAVEL_EXIT" || dayType === "STANDBY" || isRotationStart) ? "text-current fill-current" : "text-white fill-white")} />}
+                     {event.flightTicketPurchased && <Plane className={cn("w-3 h-3", "fill-current")} />}
+                     {event.notes && <StickyNote className={cn("w-3 h-3", "fill-current")} />}
                   </div>
                 )}
 
                 {isCurrentMonth && mini && event && (
                   <div className="absolute top-0 right-0 p-0.5">
-                    {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full", (dayType === "VACATION" || dayType === "ROTATION" || dayType === "TRAVEL_EXIT" || dayType === "STANDBY" || dayType === "TRAVEL_ENTRY" || isRotationStart) ? "bg-current" : "bg-white")} />}
+                    {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full bg-current")} />}
                   </div>
                 )}
               </div>
