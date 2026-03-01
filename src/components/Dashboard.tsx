@@ -299,7 +299,6 @@ export function Dashboard() {
     }
   }, [view]);
 
-  // Unified click handler to solve single/double click conflict
   const onDayClickWrapper = useCallback((date: Date) => {
     if (clickTimeoutRef.current) {
       clearTimeout(clickTimeoutRef.current);
@@ -378,24 +377,6 @@ export function Dashboard() {
             </div>
             <h1 className="font-headline font-bold text-lg hidden lg:block tracking-tight">Algeria Rotation Planner</h1>
             <h1 className="font-headline font-bold text-lg lg:hidden">ARP</h1>
-          </div>
-
-          <div className="hidden xl:flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-x px-4 h-full">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#c6d9f1]" /> Vacaciones
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#3CB371]" /> V. Entrada
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#ffc000]" /> Rotación
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#ffff00]" /> V. Salida
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#e2e8f0]" /> Standby
-            </div>
           </div>
 
           <div className="flex items-center gap-4">
