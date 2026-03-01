@@ -178,10 +178,10 @@ export function Dashboard() {
   }, [events]);
 
   const chartData = useMemo(() => [
-    { name: "Vacaciones", value: stats.VACATION, type: "VACATION" },
     { name: "V. Entrada", value: stats.TRAVEL_ENTRY, type: "TRAVEL_ENTRY" },
     { name: "Rotación", value: stats.ROTATION, type: "ROTATION" },
     { name: "V. Salida", value: stats.TRAVEL_EXIT, type: "TRAVEL_EXIT" },
+    { name: "Vacaciones", value: stats.VACATION, type: "VACATION" },
     { name: "Standby", value: stats.STANDBY, type: "STANDBY" },
   ], [stats]);
 
@@ -418,16 +418,18 @@ export function Dashboard() {
               </Label>
             </div>
 
-            <div className="flex items-center gap-2 px-3 border-r h-9">
-              <Checkbox 
-                id="toggle-classic" 
-                checked={showClassicTravelDays} 
-                onCheckedChange={(checked) => setShowClassicTravelDays(!!checked)}
-              />
-              <Label htmlFor="toggle-classic" className="text-[10px] font-bold uppercase tracking-tight cursor-pointer">
-                CLASSIC TRAVEL DAYS
-              </Label>
-            </div>
+            {showTravelDays && (
+              <div className="flex items-center gap-2 px-3 border-r h-9 animate-in fade-in slide-in-from-left-2 duration-300">
+                <Checkbox 
+                  id="toggle-classic" 
+                  checked={showClassicTravelDays} 
+                  onCheckedChange={(checked) => setShowClassicTravelDays(!!checked)}
+                />
+                <Label htmlFor="toggle-classic" className="text-[10px] font-bold uppercase tracking-tight cursor-pointer">
+                  CLASSIC TRAVEL DAYS
+                </Label>
+              </div>
+            )}
 
             <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="hidden md:flex w-auto">
               <TabsList className="grid grid-cols-2 h-9 w-[200px]">
