@@ -427,7 +427,7 @@ export function Dashboard() {
             
             <Card 
               className="shadow-sm border-muted cursor-pointer hover:bg-muted/5 transition-colors select-none"
-              onDoubleClick={() => setStatsDialogOpen(true)}
+              onClick={() => setStatsDialogOpen(true)}
             >
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold flex items-center justify-between">
@@ -441,7 +441,7 @@ export function Dashboard() {
                         <MousePointer2 className="w-3 h-3 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p className="text-[10px]">Doble clic para ver gráfica</p>
+                        <p className="text-[10px]">Clic para ver gráfica</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
