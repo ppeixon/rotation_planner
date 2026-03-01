@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { doc, onSnapshot, collection } from "firebase/firestore";
+import { useState, useEffect, useCallback } from "react";
+import { doc, onSnapshot, collection, writeBatch, Timestamp } from "firebase/firestore";
 import { useFirestore, setDocumentNonBlocking } from "@/firebase";
 import { useAuth } from "./useAuth";
 import { DayEvent, UserSettings, DayType } from "@/lib/types";
@@ -63,35 +63,13 @@ export function useRotation() {
     };
   }, [user, db]);
 
-  const internalUpdateDay = (dateKey: string, type: DayType, source: "MANUAL" | "GENERATED" = "GENERATED") => {
-    if (!user || !db) return;
-    
-    const existing = events[dateKey];
-    if (source === "GENERATED" && existing?.source === "MANUAL") {
-      return;
-    }
-
-    const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
-    setDocumentNonBlocking(dayRef, {
-      id: dateKey,
-      dateKey,
-      dayType: type,
-      flightTicketPurchased: existing?.flightTicketPurchased ?? false,
-      flightInfo: existing?.flightInfo ?? "",
-      notes: existing?.notes ?? "",
-      source: source,
-      updatedAt: Date.now(),
-      updatedBy: user.uid,
-      userId: user.uid,
-    }, { merge: true });
-  };
-
-  const updateDay = (dateKey: string, partial: Partial<DayEvent>) => {
+  const updateDay = useCallback((dateKey: string, partial: Partial<DayEvent>) => {
     if (!user || !db) return;
     const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
     const existing = events[dateKey];
     
-    const newEvent: DayEvent = {
+    const newEvent: Partial<DayEvent> = {
+      ...existing,
       id: dateKey,
       dateKey,
       dayType: partial.dayType ?? existing?.dayType ?? "NORMAL",
@@ -105,38 +83,76 @@ export function useRotation() {
     };
     
     setDocumentNonBlocking(dayRef, newEvent, { merge: true });
-  };
+  }, [user, db, events]);
 
-  /**
-   * Autómata de Ciclo de 56 días:
-   * VAC (26) -> TE (1) -> ROT (28) -> TX (1)
-   */
-  const fillRestOfYear = (current: Date, state: "VAC" | "TE" | "ROT" | "TX", currentYear: number, endGen: Date) => {
+  const fillRestOfYearBatch = (batch: any, current: Date, state: "VAC" | "TE" | "ROT" | "TX", currentYear: number, endGen: Date, userId: string) => {
     let iterDate = current;
     while (iterDate.getFullYear() === currentYear && isBefore(iterDate, addDays(endGen, 1))) {
+      const dateKey = format(iterDate, "yyyy-MM-dd");
+      const dayRef = doc(db!, "users", userId, "dayEvents", dateKey);
+      const existing = events[dateKey];
+
+      if (existing?.source === "MANUAL") {
+        // Skip manual overrides but advance the date and state
+        if (state === "VAC") {
+           iterDate = addDays(iterDate, 26);
+           state = "TE";
+        } else if (state === "TE") {
+           iterDate = addDays(iterDate, 1);
+           state = "ROT";
+        } else if (state === "ROT") {
+           iterDate = addDays(iterDate, 28);
+           state = "TX";
+        } else if (state === "TX") {
+           iterDate = addDays(iterDate, 1);
+           state = "VAC";
+        }
+        continue;
+      }
+
       if (state === "VAC") {
         for (let i = 0; i < 26; i++) {
           if (iterDate.getFullYear() !== currentYear) break;
-          internalUpdateDay(format(iterDate, "yyyy-MM-dd"), "VACATION", "GENERATED");
+          const dk = format(iterDate, "yyyy-MM-dd");
+          if (events[dk]?.source !== "MANUAL") {
+            batch.set(doc(db!, "users", userId, "dayEvents", dk), {
+              id: dk, dateKey: dk, dayType: "VACATION", source: "GENERATED", updatedAt: Date.now(), updatedBy: userId, userId
+            }, { merge: true });
+          }
           iterDate = addDays(iterDate, 1);
         }
         state = "TE";
       } else if (state === "TE") {
         if (iterDate.getFullYear() === currentYear) {
-          internalUpdateDay(format(iterDate, "yyyy-MM-dd"), "TRAVEL_ENTRY", "GENERATED");
+          const dk = format(iterDate, "yyyy-MM-dd");
+          if (events[dk]?.source !== "MANUAL") {
+            batch.set(doc(db!, "users", userId, "dayEvents", dk), {
+              id: dk, dateKey: dk, dayType: "TRAVEL_ENTRY", source: "GENERATED", updatedAt: Date.now(), updatedBy: userId, userId
+            }, { merge: true });
+          }
           iterDate = addDays(iterDate, 1);
         }
         state = "ROT";
       } else if (state === "ROT") {
         for (let i = 0; i < 28; i++) {
           if (iterDate.getFullYear() !== currentYear) break;
-          internalUpdateDay(format(iterDate, "yyyy-MM-dd"), "ROTATION", "GENERATED");
+          const dk = format(iterDate, "yyyy-MM-dd");
+          if (events[dk]?.source !== "MANUAL") {
+            batch.set(doc(db!, "users", userId, "dayEvents", dk), {
+              id: dk, dateKey: dk, dayType: "ROTATION", source: "GENERATED", updatedAt: Date.now(), updatedBy: userId, userId
+            }, { merge: true });
+          }
           iterDate = addDays(iterDate, 1);
         }
         state = "TX";
       } else if (state === "TX") {
         if (iterDate.getFullYear() === currentYear) {
-          internalUpdateDay(format(iterDate, "yyyy-MM-dd"), "TRAVEL_EXIT", "GENERATED");
+          const dk = format(iterDate, "yyyy-MM-dd");
+          if (events[dk]?.source !== "MANUAL") {
+            batch.set(doc(db!, "users", userId, "dayEvents", dk), {
+              id: dk, dateKey: dk, dayType: "TRAVEL_EXIT", source: "GENERATED", updatedAt: Date.now(), updatedBy: userId, userId
+            }, { merge: true });
+          }
           iterDate = addDays(iterDate, 1);
         }
         state = "VAC";
@@ -144,22 +160,23 @@ export function useRotation() {
     }
   };
 
-  const generateRotations = (startDateKey: string, initialType: string, initialDuration: number) => {
+  const generateRotations = useCallback((startDateKey: string, initialType: string, initialDuration: number) => {
     if (!user || !db) return;
-    
+    const batch = writeBatch(db);
     let current = startOfDay(parseISO(startDateKey));
     const currentYear = current.getFullYear();
     const endGen = endOfYear(current);
 
-    // 1. Bloque inicial personalizado
     const baseType = initialType as DayType;
     for (let i = 0; i < initialDuration; i++) {
       if (current.getFullYear() !== currentYear) break;
-      internalUpdateDay(format(current, "yyyy-MM-dd"), baseType, "GENERATED");
+      const dk = format(current, "yyyy-MM-dd");
+      batch.set(doc(db, "users", user.uid, "dayEvents", dk), {
+        id: dk, dateKey: dk, dayType: baseType, source: "GENERATED", updatedAt: Date.now(), updatedBy: user.uid, userId: user.uid
+      }, { merge: true });
       current = addDays(current, 1);
     }
 
-    // 2. Determinar siguiente estado del autómata
     let nextState: "VAC" | "TE" | "ROT" | "TX";
     if (baseType === "VACATION") nextState = "TE";
     else if (baseType === "TRAVEL_ENTRY") nextState = "ROT";
@@ -167,40 +184,35 @@ export function useRotation() {
     else if (baseType === "TRAVEL_EXIT") nextState = "VAC";
     else nextState = "VAC";
 
-    // 3. Rellenar
-    fillRestOfYear(current, nextState, currentYear, endGen);
-  };
+    fillRestOfYearBatch(batch, current, nextState, currentYear, endGen, user.uid);
+    batch.commit();
+  }, [user, db, events]);
 
-  const resyncChain = (anchorDate: string, newDuration: number, type: DayType) => {
+  const resyncChain = useCallback((anchorDate: string, newDuration: number, type: DayType) => {
     if (!user || !db) return;
-
+    const batch = writeBatch(db);
     let current = startOfDay(parseISO(anchorDate));
     const currentYear = current.getFullYear();
     const endGen = endOfYear(current);
 
-    // 1. Aplicar el bloque base modificado
     for (let i = 0; i < newDuration; i++) {
       if (current.getFullYear() !== currentYear) break;
-      internalUpdateDay(format(current, "yyyy-MM-dd"), type, "GENERATED");
+      const dk = format(current, "yyyy-MM-dd");
+      batch.set(doc(db, "users", user.uid, "dayEvents", dk), {
+        id: dk, dateKey: dk, dayType: type, source: "GENERATED", updatedAt: Date.now(), updatedBy: user.uid, userId: user.uid
+      }, { merge: true });
       current = addDays(current, 1);
     }
 
-    // 2. Determinar siguiente estado
     let nextState: "VAC" | "TE" | "ROT" | "TX";
-    if (type === "VACATION") {
-      nextState = "TE";
-    } else if (type === "ROTATION") {
-      nextState = "TX";
-    } else if (type === "STANDBY") {
-      // Después de standby, reanudamos el ciclo con vacaciones como valor por defecto
-      nextState = "VAC";
-    } else {
-      return;
-    }
+    if (type === "VACATION") nextState = "TE";
+    else if (type === "ROTATION") nextState = "TX";
+    else if (type === "STANDBY") nextState = "VAC";
+    else return;
 
-    // 3. Continuar el ciclo automático
-    fillRestOfYear(current, nextState, currentYear, endGen);
-  };
+    fillRestOfYearBatch(batch, current, nextState, currentYear, endGen, user.uid);
+    batch.commit();
+  }, [user, db, events]);
 
   return { settings, events, loading, updateDay, generateRotations, resyncChain };
 }

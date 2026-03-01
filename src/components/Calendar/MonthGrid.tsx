@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { 
   format, 
   startOfMonth, 
@@ -23,11 +23,9 @@ interface MonthGridProps {
   onDayClick: (date: Date) => void;
   onDayMouseDown?: (date: Date, type: string) => void;
   onDayMouseEnter?: (date: Date) => void;
-  dragState?: {
-    anchorDate: string | null;
-    hoverDate: string | null;
-    type: string | null;
-  };
+  dragAnchorDate?: string | null;
+  dragHoverDate?: string | null;
+  isDragging?: boolean;
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -46,11 +44,15 @@ export const MonthGrid = React.memo(function MonthGrid({
   onDayClick, 
   onDayMouseDown, 
   onDayMouseEnter,
-  dragState 
+  dragAnchorDate,
+  dragHoverDate,
+  isDragging
 }: MonthGridProps) {
-  const start = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 1 });
-  const end = endOfWeek(endOfMonth(monthDate), { weekStartsOn: 1 });
-  const days = eachDayOfInterval({ start, end });
+  const days = useMemo(() => {
+    const start = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 1 });
+    const end = endOfWeek(endOfMonth(monthDate), { weekStartsOn: 1 });
+    return eachDayOfInterval({ start, end });
+  }, [monthDate]);
 
   const weekdayLabels = mini ? ["L", "M", "X", "J", "V", "S", "D"] : ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
@@ -72,31 +74,29 @@ export const MonthGrid = React.memo(function MonthGrid({
 
           const dayType = event?.dayType;
           const isTravelDay = dayType === "TRAVEL_ENTRY" || dayType === "TRAVEL_EXIT";
-          
-          const isDragTarget = dragState?.hoverDate === dateKey;
-          const isDraggingAny = !!dragState?.isDragging;
+          const isDragTarget = isDragging && dragHoverDate === dateKey;
 
           const colorClass = event && isCurrentMonth && dayType ? TYPE_COLORS[dayType] : "bg-background";
 
           return (
             <div
               key={dateKey}
-              onClick={() => !isDraggingAny && onDayClick(day)}
+              onClick={() => !isDragging && onDayClick(day)}
               onMouseDown={(e) => {
                 if (isTravelDay && onDayMouseDown) {
                   e.preventDefault();
                   onDayMouseDown(day, dayType!);
                 }
               }}
-              onMouseEnter={() => onDayMouseEnter && onDayMouseEnter(day)}
+              onMouseEnter={() => isDragging && onDayMouseEnter && onDayMouseEnter(day)}
               className={cn(
-                "relative bg-background transition-all duration-75 flex flex-col items-center justify-center group",
+                "relative bg-background transition-colors duration-75 flex flex-col items-center justify-center group",
                 !isCurrentMonth && "bg-muted/30 text-muted-foreground opacity-50",
                 mini ? "aspect-square py-1" : "aspect-square sm:aspect-auto sm:min-h-[80px] p-1",
                 colorClass,
                 isTravelDay && !mini && "cursor-grab active:cursor-grabbing",
                 isDragTarget && "ring-2 ring-primary ring-inset z-20",
-                !isDraggingAny && "hover:bg-accent/10 cursor-pointer"
+                !isDragging && "hover:bg-accent/10 cursor-pointer"
               )}
             >
               <span className={cn(
@@ -106,7 +106,7 @@ export const MonthGrid = React.memo(function MonthGrid({
                 {format(day, "d")}
               </span>
               
-              {!mini && isCurrentMonth && isTravelDay && !isDraggingAny && (
+              {!mini && isCurrentMonth && isTravelDay && !isDragging && (
                 <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <MoveHorizontal className="w-3 h-3 text-current" />
                 </div>

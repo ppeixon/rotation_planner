@@ -66,12 +66,11 @@ export function Dashboard() {
   const [dragState, setDragState] = useState<{
     anchorDate: string;
     type: DayType;
-    isDragging: boolean;
     initialTravelDate: string;
   } | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
 
-  // 1. Calculate stats (Memoized)
+  // 1. Hooks first - all data calculations
   const stats = useMemo(() => {
     const periodPrefix = view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "yyyy-MM");
     const raw = Object.entries(events).reduce((acc, [dateKey, event]) => {
@@ -106,7 +105,6 @@ export function Dashboard() {
     };
   }, [events, currentDate, view]);
 
-  // 2. Calculate blocks in year (Memoized)
   const blocksInYear = useMemo(() => {
     const yearStr = format(currentDate, "yyyy");
     const yearEvents = Object.entries(events)
@@ -155,7 +153,7 @@ export function Dashboard() {
     return blocks;
   }, [events, currentDate]);
 
-  // Handlers (Stable)
+  // Handlers
   const handleDayMouseDown = useCallback((date: Date, type: string) => {
     const dateKey = format(date, "yyyy-MM-dd");
     let baseType: DayType;
@@ -164,7 +162,6 @@ export function Dashboard() {
     else if (type === "TRAVEL_ENTRY") baseType = "VACATION";
     else return;
 
-    // Find block start
     let start = date;
     let checkDate = subDays(date, 1);
     while (true) {
@@ -178,17 +175,13 @@ export function Dashboard() {
     setDragState({
       anchorDate: format(start, "yyyy-MM-dd"),
       type: baseType,
-      isDragging: true,
       initialTravelDate: dateKey
     });
     setHoverDate(dateKey);
   }, [events]);
 
   const handleDayMouseEnter = useCallback((date: Date) => {
-    setHoverDate((prev) => {
-      const next = format(date, "yyyy-MM-dd");
-      return prev === next ? prev : next;
-    });
+    setHoverDate(format(date, "yyyy-MM-dd"));
   }, []);
 
   const handleDayClick = useCallback((date: Date) => {
@@ -230,9 +223,11 @@ export function Dashboard() {
           scanDate = addDays(scanDate, 1);
         }
 
+        const effectiveDuration = (typeToFind === "ROTATION" || typeToFind === "VACATION") ? baseDuration - 1 : baseDuration;
+
         setBlockData({
           startDate: format(start, "yyyy-MM-dd"),
-          duration: baseDuration,
+          duration: effectiveDuration,
           type: typeToFind
         });
         setBlockEditorOpen(true);
@@ -247,7 +242,7 @@ export function Dashboard() {
 
   useEffect(() => {
     const handleMouseUp = () => {
-      if (dragState?.isDragging && hoverDate && dragState.anchorDate) {
+      if (dragState && hoverDate) {
         const anchor = parseISO(dragState.anchorDate);
         const target = parseISO(hoverDate);
         const newDuration = Math.max(1, differenceInDays(target, anchor));
@@ -260,7 +255,7 @@ export function Dashboard() {
       setHoverDate(null);
     };
 
-    if (dragState?.isDragging) {
+    if (dragState) {
       window.addEventListener("mouseup", handleMouseUp);
     }
     return () => window.removeEventListener("mouseup", handleMouseUp);
@@ -302,7 +297,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-body">
-      <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 shrink-0">
             <div className="bg-primary p-2 rounded-lg">
@@ -413,8 +408,8 @@ export function Dashboard() {
                   </div>
                   <TooltipProvider>
                     <Tooltip>
-                      <TooltipTrigger>
-                        <MousePointer2 className="w-3 h-3 text-muted-foreground" />
+                      <TooltipTrigger asChild>
+                        <MousePointer2 className="w-3 h-3 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-[10px]">Doble clic para editar bloque</p>
@@ -487,7 +482,7 @@ export function Dashboard() {
 
             <div className={cn(
               "bg-card border rounded-2xl p-4 sm:p-6 shadow-sm min-h-[500px] transition-all",
-              dragState?.isDragging && "ring-2 ring-primary ring-offset-2 ring-inset"
+              dragState && "ring-2 ring-primary ring-offset-2 ring-inset"
             )}>
               {view === "monthly" ? (
                 <MonthGrid 
@@ -496,11 +491,9 @@ export function Dashboard() {
                   onDayClick={handleDayClick}
                   onDayMouseDown={handleDayMouseDown}
                   onDayMouseEnter={handleDayMouseEnter}
-                  dragState={{
-                    anchorDate: dragState?.anchorDate || null,
-                    hoverDate: hoverDate,
-                    type: dragState?.type || null
-                  }}
+                  dragAnchorDate={dragState?.anchorDate}
+                  dragHoverDate={hoverDate}
+                  isDragging={!!dragState}
                 />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -514,11 +507,9 @@ export function Dashboard() {
                         onDayClick={handleDayClick}
                         onDayMouseDown={handleDayMouseDown}
                         onDayMouseEnter={handleDayMouseEnter}
-                        dragState={{
-                          anchorDate: dragState?.anchorDate || null,
-                          hoverDate: hoverDate,
-                          type: dragState?.type || null
-                        }}
+                        dragAnchorDate={dragState?.anchorDate}
+                        dragHoverDate={hoverDate}
+                        isDragging={!!dragState}
                       />
                     </div>
                   ))}
