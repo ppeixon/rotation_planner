@@ -95,14 +95,15 @@ export const MonthGrid = React.memo(function MonthGrid({
                 // Siempre dividido (naranja/azul) según solicitud
                 colorClass = "day-travel-exit-split";
               } else if (dayType === "TRAVEL_ENTRY") {
-                // Dividido azul/verde si visible, azul/naranja si oculto
-                colorClass = showTravelDays ? "day-travel-entry-split" : "day-travel-entry-to-rotation-split";
+                // Dividido azul/verde si visible, azul sólido si oculto
+                colorClass = showTravelDays ? "day-travel-entry-split" : "bg-[#c6d9f1] text-[#1e3a8a]";
               } else if (dayType === "ROTATION") {
-                // Detectar inicio de rotación para degradado verde/naranja (solo si visible)
+                // Detectar inicio de rotación
                 const prevDateKey = format(subDays(day, 1), "yyyy-MM-dd");
                 const isRotationStart = events[prevDateKey]?.dayType === "TRAVEL_ENTRY";
-                if (isRotationStart && showTravelDays) {
-                  colorClass = "day-rotation-start-split";
+                if (isRotationStart) {
+                  // Si se muestran viajes: Verde -> Naranja. Si se ocultan: Azul -> Naranja.
+                  colorClass = showTravelDays ? "day-rotation-start-split" : "day-rotation-start-hidden-split";
                 } else {
                   colorClass = TYPE_COLORS.ROTATION;
                 }

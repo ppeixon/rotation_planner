@@ -66,12 +66,6 @@
   color: #1e3a8a; 
 }
 
-/* Día de Viaje Entrada (Vuelos Ocultos): Azul Vacaciones -> Naranja Rotación (Diagonal 45deg) */
-.day-travel-entry-to-rotation-split {
-  background: linear-gradient(45deg, #c6d9f1 50%, #ffc000 50%); 
-  color: #1e3a8a;
-}
-
 /* Día de Viaje Salida: Naranja Rotación -> Azul Vacaciones (Diagonal 135deg) */
 .day-travel-exit-split { 
   background: linear-gradient(135deg, #ffc000 50%, #c6d9f1 50%); 
@@ -81,6 +75,12 @@
 /* Primer Día de Rotación (Con Vuelos): Verde Viaje -> Naranja Rotación (Diagonal 135deg) */
 .day-rotation-start-split {
   background: linear-gradient(135deg, #3CB371 50%, #ffc000 50%); 
+  color: #2B1A0A;
+}
+
+/* Primer Día de Rotación (Sin Vuelos): Azul Vacaciones -> Naranja Rotación (Diagonal 135deg) */
+.day-rotation-start-hidden-split {
+  background: linear-gradient(135deg, #c6d9f1 50%, #ffc000 50%); 
   color: #2B1A0A;
 }
 
