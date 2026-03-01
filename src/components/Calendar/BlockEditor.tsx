@@ -5,12 +5,9 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, parseISO, addDays, differenceInDays, startOfDay } from "date-fns";
+import { format, parseISO, addDays, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarDays, Settings2, Info, Calendar as CalendarIcon, Plane } from "lucide-react";
+import { Settings2, Info, Plane, Plus, Minus, CalendarDays } from "lucide-react";
 import { DayType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -25,41 +22,17 @@ interface BlockEditorProps {
 
 export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type, onSave }: BlockEditorProps) {
   const [duration, setDuration] = useState(currentDuration);
-  const [travelDate, setTravelDate] = useState<Date | undefined>(undefined);
-  const [month, setMonth] = useState<Date>(new Date());
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const start = useMemo(() => (startDate ? startOfDay(parseISO(startDate)) : null), [startDate]);
+  const travelDate = useMemo(() => (start ? addDays(start, duration) : null), [start, duration]);
 
   useEffect(() => {
-    if (start && isOpen) {
+    if (isOpen) {
       setDuration(currentDuration);
-      const initialTravelDate = addDays(start, currentDuration);
-      setTravelDate(initialTravelDate);
-      setMonth(initialTravelDate);
     }
-  }, [isOpen, start, currentDuration]);
+  }, [isOpen, currentDuration]);
 
   if (!start) return null;
-
-  const handleDurationChange = (val: number) => {
-    const newDur = Math.max(1, val);
-    setDuration(newDur);
-    const newTravelDate = addDays(start, newDur);
-    setTravelDate(newTravelDate);
-    setMonth(newTravelDate);
-  };
-
-  const handleDateChange = (date: Date | undefined) => {
-    if (date && date > start) {
-      const normalizedDate = startOfDay(date);
-      setTravelDate(normalizedDate);
-      const newDur = differenceInDays(normalizedDate, start);
-      setDuration(newDur);
-      setMonth(normalizedDate);
-      setIsCalendarOpen(false);
-    }
-  };
 
   const handleSave = () => {
     onSave(startDate!, duration, type);
@@ -68,102 +41,90 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
 
   const isRotation = type === "ROTATION";
   const typeLabel = isRotation ? "Rotación" : "Vacaciones";
-  const travelLabel = isRotation ? "Día de Viaje de Salida (Amarillo)" : "Día de Viaje de Entrada (Verde)";
   const typeColor = isRotation ? "text-primary" : "text-[#1e3a8a]";
+  const travelIconColor = isRotation ? "text-[#ffff00]" : "text-[#3CB371]";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[450px] rounded-3xl">
+      <DialogContent className="sm:max-w-[450px] rounded-3xl border-none shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <Settings2 className="w-5 h-5 text-primary" />
-            Ajustar Cadena de {typeLabel}
+          <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+            <Settings2 className="w-6 h-6 text-primary" />
+            Configurar {typeLabel}
           </DialogTitle>
-          <DialogDescription>
-            Selecciona el día de viaje en el calendario o ajusta la duración manualmente.
+          <DialogDescription className="text-sm">
+            Ajusta la duración del bloque. El día de viaje se calculará automáticamente.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-6 py-4">
+        <div className="grid gap-8 py-6">
+          {/* Resumen de Fechas */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-2xl border border-muted">
-              <CalendarDays className="w-5 h-5 text-muted-foreground" />
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Inicio Cadena</p>
-                <p className="text-xs font-semibold">{format(start, "d MMM yyyy", { locale: es })}</p>
+            <div className="flex flex-col gap-1 p-4 bg-muted/40 rounded-2xl border border-muted">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <CalendarDays className="w-4 h-4" />
+                <span className="text-[10px] uppercase font-bold tracking-wider">Inicio</span>
               </div>
+              <p className="text-sm font-bold">{format(start, "d MMM yyyy", { locale: es })}</p>
             </div>
-            <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-2xl border border-primary/10">
-              <Plane className={cn("w-5 h-5", isRotation ? "text-[#ffff00]" : "text-[#3CB371]")} />
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{isRotation ? "Viaje Salida" : "Viaje Entrada"}</p>
-                <p className="text-xs font-semibold">{travelDate ? format(travelDate, "d MMM yyyy", { locale: es }) : "---"}</p>
+            <div className="flex flex-col gap-1 p-4 bg-primary/5 rounded-2xl border border-primary/10">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Plane className={cn("w-4 h-4", travelIconColor)} />
+                <span className="text-[10px] uppercase font-bold tracking-wider">{isRotation ? "V. Salida" : "V. Entrada"}</span>
               </div>
+              <p className="text-sm font-bold">{travelDate ? format(travelDate, "d MMM yyyy", { locale: es }) : "---"}</p>
             </div>
           </div>
 
+          {/* Ajuste de Duración */}
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">Selecciona el Día de Viaje</Label>
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full h-12 justify-start text-left font-normal rounded-xl border-primary/20",
-                      !travelDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {travelDate ? format(travelDate, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 rounded-2xl" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={travelDate}
-                    onSelect={handleDateChange}
-                    month={month}
-                    onMonthChange={setMonth}
-                    disabled={(date) => date <= start}
-                    initialFocus
-                    locale={es}
-                  />
-                </PopoverContent>
-              </Popover>
-              <p className={cn("text-[10px] font-bold uppercase text-center mt-1", isRotation ? "text-[#b8860b]" : "text-[#3CB371]")}>
-                {travelLabel}
-              </p>
-            </div>
+            <Label className="text-center block text-sm font-bold text-muted-foreground uppercase tracking-widest">
+              Duración del Bloque
+            </Label>
+            
+            <div className="flex items-center justify-center gap-6">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setDuration(Math.max(1, duration - 1))}
+                className="h-16 w-16 rounded-2xl border-2 hover:bg-primary/10 hover:border-primary transition-all active:scale-90"
+              >
+                <Minus className="w-8 h-8 text-primary" />
+              </Button>
 
-            <div className="space-y-2">
-              <Label htmlFor="duration" className="text-sm font-semibold flex justify-between">
-                Días de {typeLabel}
-                <span className={cn("font-bold", typeColor)}>{duration} días</span>
-              </Label>
-              <Input
-                id="duration"
-                type="number"
-                min="1"
-                value={duration}
-                onChange={(e) => handleDurationChange(parseInt(e.target.value) || 1)}
-                className="h-12 rounded-xl border-primary/20 focus:ring-primary text-lg font-bold text-center"
-              />
+              <div className="flex flex-col items-center">
+                <span className={cn("text-6xl font-black tracking-tighter transition-all", typeColor)}>
+                  {duration}
+                </span>
+                <span className="text-xs font-bold text-muted-foreground uppercase">Días</span>
+              </div>
+
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setDuration(duration + 1)}
+                className="h-16 w-16 rounded-2xl border-2 hover:bg-primary/10 hover:border-primary transition-all active:scale-90"
+              >
+                <Plus className="w-8 h-8 text-primary" />
+              </Button>
             </div>
           </div>
 
-          <div className="flex gap-3 p-3 bg-primary/5 border border-primary/10 rounded-xl">
+          {/* Info adicional */}
+          <div className="flex gap-3 p-4 bg-primary/5 border border-primary/10 rounded-2xl">
             <Info className="w-5 h-5 text-primary shrink-0" />
-            <p className="text-[11px] text-muted-foreground leading-snug">
-              Al guardar, el día seleccionado será el nuevo hito de viaje y se recalculará todo el año siguiendo el ciclo de 56 días (28+1 / 26+1).
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Al guardar, se establecerá el día de viaje justo después de los {duration} días de {typeLabel.toLowerCase()} y se recalculará el resto del año siguiendo tu ciclo de 56 días.
             </p>
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="ghost" onClick={onClose} className="rounded-xl">Cancelar</Button>
-          <Button onClick={handleSave} className="rounded-xl px-8 font-bold shadow-lg shadow-primary/20">
-            Actualizar Cadena
+        <DialogFooter className="gap-2 sm:gap-0 mt-2">
+          <Button variant="ghost" onClick={onClose} className="rounded-xl h-12 font-semibold">
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} className="rounded-xl h-12 px-10 font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform">
+            Guardar y Sincronizar
           </Button>
         </DialogFooter>
       </DialogContent>
