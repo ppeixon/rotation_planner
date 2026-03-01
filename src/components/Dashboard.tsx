@@ -37,8 +37,7 @@ import {
   CartesianGrid, 
   XAxis, 
   YAxis,
-  Cell,
-  Legend
+  Cell
 } from "recharts";
 import { 
   format, 
@@ -745,7 +744,6 @@ export function Dashboard() {
                     tick={{ fontSize: 12, fontWeight: 700 }}
                   />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Legend verticalAlign="top" height={36}/>
                   <Bar dataKey="TRAVEL_ENTRY" name="V. Entrada" stackId="a" fill={CHART_COLORS.TRAVEL_ENTRY} radius={[0, 0, 0, 0]} />
                   <Bar dataKey="ROTATION" name="Rotación" stackId="a" fill={CHART_COLORS.ROTATION} />
                   <Bar dataKey="TRAVEL_EXIT" name="V. Salida" stackId="a" fill={CHART_COLORS.TRAVEL_EXIT} />
@@ -754,12 +752,6 @@ export function Dashboard() {
                 </BarChart>
               </ChartContainer>
             </div>
-          </div>
-
-          <div className="mt-4 p-4 bg-muted/20 rounded-2xl border border-muted/50">
-             <p className="text-xs text-muted-foreground text-center italic">
-               * Los datos se calculan sumando todos los eventos registrados en la base de datos para cada año natural.
-             </p>
           </div>
         </DialogContent>
       </Dialog>
