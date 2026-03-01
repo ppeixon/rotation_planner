@@ -33,7 +33,8 @@ import {
   Calendar as CalendarIcon, 
   LogOut,
   BarChart3,
-  ListTodo
+  ListTodo,
+  MousePointer2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { DayType } from "@/lib/types";
@@ -113,6 +114,15 @@ export function Dashboard() {
       </div>
     );
   }
+
+  const handleBlockDoubleClick = (block: { type: DayType; start: string; duration: number }) => {
+    setBlockData({
+      startDate: block.start,
+      duration: block.duration - 1, // El editor espera la duración base (sin el viaje)
+      type: block.type
+    });
+    setBlockEditorOpen(true);
+  };
 
   const handleDayClick = (date: Date) => {
     const dateKey = format(date, "yyyy-MM-dd");
@@ -320,22 +330,39 @@ export function Dashboard() {
 
             <Card className="shadow-sm border-muted">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <ListTodo className="w-4 h-4 text-primary" />
-                  Bloques del {format(currentDate, "yyyy")}
+                <CardTitle className="text-sm font-semibold flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ListTodo className="w-4 h-4 text-primary" />
+                    Bloques del {format(currentDate, "yyyy")}
+                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <MousePointer2 className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-[10px]">Doble clic para editar bloque</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardTitle>
               </CardHeader>
               <CardContent className="max-h-[300px] overflow-y-auto px-4 pb-4 custom-scrollbar">
                 <div className="space-y-2">
                   {blocksInYear.map((block, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-[11px] py-2 border-b last:border-0 border-muted/50">
+                    <div 
+                      key={idx} 
+                      className="flex items-center justify-between text-[11px] py-2 border-b last:border-0 border-muted/50 cursor-pointer hover:bg-muted/10 transition-colors group rounded-lg px-2"
+                      onDoubleClick={() => handleBlockDoubleClick(block)}
+                      title="Doble clic para editar este bloque"
+                    >
                       <div className="flex items-center gap-3">
                         <div className={cn(
                           "w-2.5 h-2.5 rounded-full shrink-0", 
                           block.type === "ROTATION" ? "bg-[#ffc000]" : "bg-[#c6d9f1]"
                         )} />
                         <div>
-                          <p className="font-bold text-foreground">
+                          <p className="font-bold text-foreground group-hover:text-primary transition-colors">
                             {block.type === "ROTATION" ? "Rotación + V. Salida" : "Vacaciones + V. Entrada"}
                           </p>
                           <p className="text-[10px] text-muted-foreground">
@@ -343,7 +370,7 @@ export function Dashboard() {
                           </p>
                         </div>
                       </div>
-                      <div className="bg-muted/30 px-2 py-1 rounded-md">
+                      <div className="bg-muted/30 px-2 py-1 rounded-md group-hover:bg-primary/20 transition-colors">
                         <span className="font-bold text-primary">{block.duration} d</span>
                       </div>
                     </div>
