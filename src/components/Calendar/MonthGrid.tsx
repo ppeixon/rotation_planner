@@ -21,6 +21,7 @@ interface MonthGridProps {
   events: Record<string, DayEvent>;
   mini?: boolean;
   onDayClick: (date: Date) => void;
+  onDayDoubleClick?: (date: Date) => void;
   onDayMouseDown?: (date: Date, type: string) => void;
   onDayMouseEnter?: (date: Date) => void;
   dragAnchorDate?: string | null;
@@ -42,6 +43,7 @@ export const MonthGrid = React.memo(function MonthGrid({
   events, 
   mini = false, 
   onDayClick, 
+  onDayDoubleClick,
   onDayMouseDown, 
   onDayMouseEnter,
   dragAnchorDate,
@@ -82,6 +84,7 @@ export const MonthGrid = React.memo(function MonthGrid({
             <div
               key={dateKey}
               onClick={() => !isDragging && onDayClick(day)}
+              onDoubleClick={() => !isDragging && onDayDoubleClick?.(day)}
               onMouseDown={(e) => {
                 if (isTravelDay && onDayMouseDown) {
                   e.preventDefault();

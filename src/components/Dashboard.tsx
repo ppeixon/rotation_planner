@@ -184,6 +184,13 @@ export function Dashboard() {
     setHoverDate(format(date, "yyyy-MM-dd"));
   }, []);
 
+  const handleDayDoubleClick = useCallback((date: Date) => {
+    if (view === "annual") {
+      setCurrentDate(date);
+      setView("monthly");
+    }
+  }, [view]);
+
   const handleDayClick = useCallback((date: Date) => {
     const dateKey = format(date, "yyyy-MM-dd");
     const event = events[dateKey];
@@ -231,9 +238,6 @@ export function Dashboard() {
           type: typeToFind
         });
         setBlockEditorOpen(true);
-      } else {
-        setCurrentDate(date);
-        setView("monthly");
       }
     } else {
       setEditingDate(dateKey);
@@ -505,6 +509,7 @@ export function Dashboard() {
                         events={events} 
                         mini 
                         onDayClick={handleDayClick}
+                        onDayDoubleClick={handleDayDoubleClick}
                         onDayMouseDown={handleDayMouseDown}
                         onDayMouseEnter={handleDayMouseEnter}
                         dragAnchorDate={dragState?.anchorDate}
