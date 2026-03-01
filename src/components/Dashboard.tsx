@@ -581,7 +581,7 @@ export function Dashboard() {
 
             <Card className={cn(
               "shadow-sm border-muted flex flex-col transition-all",
-              view === "annual" ? "max-h-[calc(100vh-28rem)] h-fit" : "h-auto"
+              view === "annual" ? "h-fit" : "h-auto"
             )}>
               <CardHeader className="pb-3 shrink-0">
                 <CardTitle className="text-sm font-semibold flex items-center justify-between">
@@ -740,7 +740,7 @@ export function Dashboard() {
 
       {/* Current Year Detailed Stats Dialog */}
       <Dialog open={currentYearStatsDialogOpen} onOpenChange={setCurrentYearStatsDialogOpen}>
-        <DialogContent className="max-w-[95vw] w-full md:max-w-4xl h-auto rounded-3xl border-none shadow-2xl flex flex-col p-6 sm:p-10">
+        <DialogContent className="max-w-[80vw] w-full h-[80vh] rounded-3xl border-none shadow-2xl flex flex-col p-6 sm:p-10">
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
               <BarChart3 className="w-6 h-6 text-primary" />
@@ -751,7 +751,7 @@ export function Dashboard() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 w-full mt-6 h-[400px]">
+          <div className="flex-1 w-full mt-6 min-h-0">
             <ChartContainer config={chartConfig} className="w-full h-full">
               <BarChart data={monthlyStatsForCurrentYear} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
@@ -780,7 +780,7 @@ export function Dashboard() {
 
       {/* Yearly Breakdown Dialog (History) */}
       <Dialog open={yearlyStatsDialogOpen} onOpenChange={setYearlyStatsDialogOpen}>
-        <DialogContent className="max-w-[95vw] w-full md:max-w-[90vw] h-[90vh] rounded-3xl border-none shadow-2xl flex flex-col p-6 sm:p-10">
+        <DialogContent className="max-w-[80vw] w-full h-[80vh] rounded-3xl border-none shadow-2xl flex flex-col p-6 sm:p-10">
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2 text-3xl font-bold">
               <History className="w-8 h-8 text-primary" />
