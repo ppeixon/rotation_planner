@@ -624,38 +624,38 @@ export function Dashboard() {
       />
 
       <Dialog open={statsDialogOpen} onOpenChange={setStatsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] rounded-3xl border-none shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
-              <BarChart3 className="w-6 h-6 text-primary" />
+        <DialogContent className="max-w-[95vw] w-full md:max-w-[80vw] h-[85vh] rounded-3xl border-none shadow-2xl flex flex-col p-6 sm:p-10">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-3xl font-bold">
+              <BarChart3 className="w-8 h-8 text-primary" />
               Distribución de Días
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-lg">
               Resumen visual para {view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy", { locale: es })}.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="h-[300px] w-full mt-6">
-            <ChartContainer config={chartConfig}>
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <div className="flex-1 w-full mt-8 min-h-0">
+            <ChartContainer config={chartConfig} className="w-full h-full">
+              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                 <XAxis 
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fontWeight: 600 }}
-                  dy={10}
+                  tick={{ fontSize: 14, fontWeight: 700 }}
+                  dy={15}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fontWeight: 600 }}
+                  tick={{ fontSize: 14, fontWeight: 700 }}
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar 
                   dataKey="value" 
-                  radius={[8, 8, 0, 0]} 
-                  barSize={40}
+                  radius={[12, 12, 0, 0]} 
+                  barSize={120}
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={CHART_COLORS[entry.type]} />
@@ -665,12 +665,12 @@ export function Dashboard() {
             </ChartContainer>
           </div>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-8 shrink-0">
             {chartData.map((item) => (
-              <div key={item.type} className="flex items-center gap-2 p-2 rounded-xl bg-muted/30 border border-muted/50">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CHART_COLORS[item.type] }} />
-                <span className="text-[10px] font-bold uppercase text-muted-foreground">{item.name}</span>
-                <span className="ml-auto text-xs font-black">{item.value}</span>
+              <div key={item.type} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 border border-muted/50">
+                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: CHART_COLORS[item.type] }} />
+                <span className="text-xs font-bold uppercase text-muted-foreground tracking-widest">{item.name}</span>
+                <span className="text-2xl font-black text-foreground">{item.value} d</span>
               </div>
             ))}
           </div>
