@@ -60,7 +60,7 @@ export function Dashboard() {
     type: DayType;
   } | null>(null);
 
-  // Memoize blocks calculation BEFORE any conditional returns to respect Hook Rules
+  // Memoize blocks calculation at the top to respect Hook Rules
   const blocksInYear = useMemo(() => {
     const yearStr = format(currentDate, "yyyy");
     const yearEvents = Object.entries(events)
@@ -377,7 +377,7 @@ export function Dashboard() {
                         </div>
                       </div>
                       <div className="bg-muted/30 px-2 py-1 rounded-md group-hover:bg-primary/20 transition-colors">
-                        <span className="font-bold text-primary">{block.duration} d</span>
+                        <span className="text-sm font-bold text-primary">{block.duration} d</span>
                       </div>
                     </div>
                   ))}
