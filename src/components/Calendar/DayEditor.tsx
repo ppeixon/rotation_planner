@@ -21,7 +21,7 @@ interface DayEditorProps {
 }
 
 export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
-  const [dayType, setDayType] = useState<DayType>("NORMAL");
+  const [dayType, setDayType] = useState<DayType>("ROTATION");
   const [ticketPurchased, setTicketPurchased] = useState(false);
   const [flightInfo, setFlightInfo] = useState("");
   const [notes, setNotes] = useState("");
@@ -33,7 +33,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
       setFlightInfo(event.flightInfo || "");
       setNotes(event.notes || "");
     } else {
-      setDayType("NORMAL");
+      setDayType("ROTATION");
       setTicketPurchased(false);
       setFlightInfo("");
       setNotes("");
@@ -72,44 +72,37 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
             >
               <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
                 <RadioGroupItem value="ROTATION" id="rotation" />
-                <Label htmlFor="rotation" className="flex items-center gap-2 cursor-pointer">
+                <Label htmlFor="rotation" className="flex items-center gap-2 cursor-pointer text-xs">
                    <div className="w-3 h-3 rounded-full bg-[#ffc000]" />
                    Rotación
                 </Label>
               </div>
               <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
                 <RadioGroupItem value="TRAVEL_EXIT" id="travel_exit" />
-                <Label htmlFor="travel_exit" className="flex items-center gap-2 cursor-pointer">
+                <Label htmlFor="travel_exit" className="flex items-center gap-2 cursor-pointer text-xs">
                   <div className="w-3 h-3 rounded-full bg-[#ffff00]" />
                   Viaje Salida
                 </Label>
               </div>
               <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
                 <RadioGroupItem value="TRAVEL_ENTRY" id="travel_entry" />
-                <Label htmlFor="travel_entry" className="flex items-center gap-2 cursor-pointer">
+                <Label htmlFor="travel_entry" className="flex items-center gap-2 cursor-pointer text-xs">
                   <div className="w-3 h-3 rounded-full bg-[#3CB371]" />
                   Viaje Entrada
                 </Label>
               </div>
               <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
                 <RadioGroupItem value="VACATION" id="vacation" />
-                <Label htmlFor="vacation" className="flex items-center gap-2 cursor-pointer">
+                <Label htmlFor="vacation" className="flex items-center gap-2 cursor-pointer text-xs">
                   <div className="w-3 h-3 rounded-full bg-[#c6d9f1]" />
                   Vacaciones
                 </Label>
               </div>
-              <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
+              <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer col-span-2">
                 <RadioGroupItem value="STANDBY" id="standby" />
-                <Label htmlFor="standby" className="flex items-center gap-2 cursor-pointer">
+                <Label htmlFor="standby" className="flex items-center gap-2 cursor-pointer text-xs">
                   <div className="w-3 h-3 rounded-full bg-[#e2e8f0]" />
                   Standby
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
-                <RadioGroupItem value="NORMAL" id="normal" />
-                <Label htmlFor="normal" className="flex items-center gap-2 cursor-pointer">
-                  <div className="w-3 h-3 rounded-full bg-slate-300" />
-                  Normal
                 </Label>
               </div>
             </RadioGroup>
