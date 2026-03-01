@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRotation } from "@/hooks/useRotation";
 import { MonthGrid } from "./Calendar/MonthGrid";
 import { DayEditor } from "./Calendar/DayEditor";
@@ -28,7 +29,8 @@ import {
   subDays,
   addDays,
   getDaysInMonth,
-  parseISO
+  parseISO,
+  differenceInDays
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { 
@@ -59,7 +61,16 @@ export function Dashboard() {
     type: DayType;
   } | null>(null);
 
-  // Memoize blocks calculation at the top to respect Hook Rules
+  // Estados para Drag & Drop
+  const [dragState, setDragState] = useState<{
+    anchorDate: string; // Inicio del bloque base (VAC o ROT)
+    type: DayType;
+    isDragging: boolean;
+    initialTravelDate: string;
+  } | null>(null);
+  const [hoverDate, setHoverDate] = useState<string | null>(null);
+
+  // Memoize blocks calculation
   const blocksInYear = useMemo(() => {
     const yearStr = format(currentDate, "yyyy");
     const yearEvents = Object.entries(events)
@@ -82,7 +93,6 @@ export function Dashboard() {
           currentBlock = { type, start: dateKey, duration: 1 };
         }
       } else if (type === "TRAVEL_ENTRY") {
-        // El día de entrada se suma visualmente al bloque de vacaciones anterior
         if (currentBlock && currentBlock.type === "VACATION") {
           currentBlock.duration++;
           blocks.push(currentBlock);
@@ -92,7 +102,6 @@ export function Dashboard() {
           currentBlock = null;
         }
       } else if (type === "TRAVEL_EXIT") {
-        // El día de salida se suma visualmente al bloque de rotación anterior
         if (currentBlock && currentBlock.type === "ROTATION") {
           currentBlock.duration++;
           blocks.push(currentBlock);
@@ -111,6 +120,64 @@ export function Dashboard() {
     return blocks;
   }, [events, currentDate]);
 
+  // Manejadores de Drag & Drop
+  const handleDayMouseDown = (date: Date, type: string) => {
+    const dateKey = format(date, "yyyy-MM-dd");
+    let baseType: DayType;
+    
+    if (type === "TRAVEL_EXIT") baseType = "ROTATION";
+    else if (type === "TRAVEL_ENTRY") baseType = "VACATION";
+    else return;
+
+    // Encontrar el inicio del bloque base
+    let start = date;
+    let checkDate = subDays(date, 1);
+    while (true) {
+      const prevKey = format(checkDate, "yyyy-MM-dd");
+      const prevEvent = events[prevKey];
+      if (!prevEvent || prevEvent.dayType !== baseType) break;
+      start = checkDate;
+      checkDate = subDays(checkDate, 1);
+    }
+
+    setDragState({
+      anchorDate: format(start, "yyyy-MM-dd"),
+      type: baseType,
+      isDragging: true,
+      initialTravelDate: dateKey
+    });
+    setHoverDate(dateKey);
+  };
+
+  const handleDayMouseEnter = (date: Date) => {
+    if (dragState?.isDragging) {
+      setHoverDate(format(date, "yyyy-MM-dd"));
+    }
+  };
+
+  useEffect(() => {
+    const handleMouseUp = () => {
+      if (dragState?.isDragging && hoverDate && dragState.anchorDate) {
+        const anchor = parseISO(dragState.anchorDate);
+        const target = parseISO(hoverDate);
+        
+        // La nueva duración es la diferencia entre el nuevo día de viaje y el ancla
+        const newDuration = Math.max(1, differenceInDays(target, anchor));
+        
+        if (newDuration !== differenceInDays(parseISO(dragState.initialTravelDate), anchor)) {
+          resyncChain(dragState.anchorDate, newDuration, dragState.type);
+        }
+      }
+      setDragState(null);
+      setHoverDate(null);
+    };
+
+    if (dragState?.isDragging) {
+      window.addEventListener("mouseup", handleMouseUp);
+    }
+    return () => window.removeEventListener("mouseup", handleMouseUp);
+  }, [dragState, hoverDate, resyncChain]);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
@@ -123,7 +190,7 @@ export function Dashboard() {
   const handleBlockDoubleClick = (block: { type: DayType; start: string; duration: number }) => {
     setBlockData({
       startDate: block.start,
-      duration: block.duration - 1, // El editor espera la duración base (sin el viaje)
+      duration: block.duration - 1,
       type: block.type
     });
     setBlockEditorOpen(true);
@@ -333,8 +400,8 @@ export function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm border-muted">
-              <CardHeader className="pb-3">
+            <Card className="shadow-sm border-muted flex flex-col max-h-[calc(100vh-25rem)]">
+              <CardHeader className="pb-3 shrink-0">
                 <CardTitle className="text-sm font-semibold flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <ListTodo className="w-4 h-4 text-primary" />
@@ -352,7 +419,7 @@ export function Dashboard() {
                   </TooltipProvider>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="max-h-[600px] overflow-y-auto px-4 pb-4 custom-scrollbar">
+              <CardContent className="overflow-y-auto px-4 pb-4 flex-1 custom-scrollbar">
                 <div className="space-y-2">
                   {blocksInYear.map((block, idx) => (
                     <div 
@@ -412,12 +479,22 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-card border rounded-2xl p-4 sm:p-6 shadow-sm min-h-[500px]">
+            <div className={cn(
+              "bg-card border rounded-2xl p-4 sm:p-6 shadow-sm min-h-[500px] transition-all",
+              dragState?.isDragging && "ring-2 ring-primary ring-offset-2"
+            )}>
               {view === "monthly" ? (
                 <MonthGrid 
                   monthDate={startOfMonth(currentDate)} 
                   events={events} 
-                  onDayClick={handleDayClick} 
+                  onDayClick={handleDayClick}
+                  onDayMouseDown={handleDayMouseDown}
+                  onDayMouseEnter={handleDayMouseEnter}
+                  dragState={{
+                    anchorDate: dragState?.anchorDate || null,
+                    hoverDate: hoverDate,
+                    type: dragState?.type || null
+                  }}
                 />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -428,7 +505,14 @@ export function Dashboard() {
                         monthDate={m} 
                         events={events} 
                         mini 
-                        onDayClick={handleDayClick} 
+                        onDayClick={handleDayClick}
+                        onDayMouseDown={handleDayMouseDown}
+                        onDayMouseEnter={handleDayMouseEnter}
+                        dragState={{
+                          anchorDate: dragState?.anchorDate || null,
+                          hoverDate: hoverDate,
+                          type: dragState?.type || null
+                        }}
                       />
                     </div>
                   ))}
