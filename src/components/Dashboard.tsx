@@ -99,7 +99,6 @@ export function Dashboard() {
   const [showTravelDays, setShowTravelDays] = useState(false);
   const [showClassicTravelDays, setShowClassicTravelDays] = useState(false);
   const [blockEditorOpen, setBlockEditorOpen] = useState(false);
-  const [statsDialogOpen, setStatsDialogOpen] = useState(false);
   const [yearlyStatsDialogOpen, setYearlyStatsDialogOpen] = useState(false);
   const [blockData, setBlockData] = useState<{
     startDate: string;
@@ -117,6 +116,7 @@ export function Dashboard() {
 
   // Timer for single/double click distinction
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastChartClickRef = useRef<{ time: number; index: number | null }>({ time: 0, index: null });
 
   // Stats for current view (Monthly or Annual)
   const stats = useMemo(() => {
@@ -176,14 +176,6 @@ export function Dashboard() {
       ...data
     })).sort((a, b) => parseInt(a.year) - parseInt(b.year));
   }, [events]);
-
-  const chartData = useMemo(() => [
-    { name: "V. Entrada", value: stats.TRAVEL_ENTRY, type: "TRAVEL_ENTRY" },
-    { name: "Rotación", value: stats.ROTATION, type: "ROTATION" },
-    { name: "V. Salida", value: stats.TRAVEL_EXIT, type: "TRAVEL_EXIT" },
-    { name: "Vacaciones", value: stats.VACATION, type: "VACATION" },
-    { name: "Standby", value: stats.STANDBY, type: "STANDBY" },
-  ], [stats]);
 
   const blocksInPeriod = useMemo(() => {
     const periodPrefix = view === "monthly" ? format(currentDate, "yyyy-MM") : format(currentDate, "yyyy");
@@ -389,6 +381,24 @@ export function Dashboard() {
     else setCurrentDate(subYears(currentDate, 1));
   };
 
+  const handleChartClick = (data: any) => {
+    if (!data || !data.activePayload) return;
+    
+    const now = Date.now();
+    const activeIndex = data.activeTooltipIndex;
+    
+    if (now - lastChartClickRef.current.time < 300 && lastChartClickRef.current.index === activeIndex) {
+      // Double click detected on a bar
+      const year = data.activePayload[0].payload.year;
+      const newDate = new Date(parseInt(year), 0, 1);
+      setCurrentDate(newDate);
+      setView("annual");
+      setYearlyStatsDialogOpen(false);
+    }
+    
+    lastChartClickRef.current = { time: now, index: activeIndex };
+  };
+
   const yearMonths = eachMonthOfInterval({
     start: startOfYear(currentDate),
     end: endOfYear(currentDate),
@@ -471,26 +481,13 @@ export function Dashboard() {
               />
             )}
             
-            <Card 
-              className="shadow-sm border-muted cursor-pointer hover:bg-muted/5 transition-colors select-none"
-              onClick={() => setStatsDialogOpen(true)}
-            >
+            <Card className="shadow-sm border-muted transition-colors select-none">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-primary" />
                     Estadísticas {periodLabel}
                   </div>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <MousePointer2 className="w-3 h-3 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-[10px]">Clic para ver gráfica</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -691,61 +688,6 @@ export function Dashboard() {
         onSave={resyncChain}
       />
 
-      {/* View Specific Stats Dialog */}
-      <Dialog open={statsDialogOpen} onOpenChange={setStatsDialogOpen}>
-        <DialogContent className="max-w-[95vw] w-full md:max-w-[80vw] h-[85vh] rounded-3xl border-none shadow-2xl flex flex-col p-6 sm:p-10">
-          <DialogHeader className="shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-3xl font-bold">
-              <BarChart3 className="w-8 h-8 text-primary" />
-              Distribución de Días
-            </DialogTitle>
-            <DialogDescription className="text-lg">
-              Resumen visual para {periodLabel}.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="flex-1 w-full mt-8 min-h-0">
-            <ChartContainer config={chartConfig} className="w-full h-full">
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 14, fontWeight: 700 }}
-                  dy={15}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 14, fontWeight: 700 }}
-                />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar 
-                  dataKey="value" 
-                  radius={[12, 12, 0, 0]} 
-                  barSize={120}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={CHART_COLORS[entry.type]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ChartContainer>
-          </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-8 shrink-0">
-            {chartData.map((item) => (
-              <div key={item.type} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 border border-muted/50">
-                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: CHART_COLORS[item.type] }} />
-                <span className="text-xs font-bold uppercase text-muted-foreground tracking-widest">{item.name}</span>
-                <span className="text-2xl font-black text-foreground">{item.value} d</span>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Yearly Breakdown Dialog */}
       <Dialog open={yearlyStatsDialogOpen} onOpenChange={setYearlyStatsDialogOpen}>
         <DialogContent className="max-w-[95vw] w-full md:max-w-[90vw] h-[90vh] rounded-3xl border-none shadow-2xl flex flex-col p-6 sm:p-10">
@@ -756,13 +698,21 @@ export function Dashboard() {
             </DialogTitle>
             <DialogDescription className="text-lg">
               Evolución detallada de rotaciones, viajes y vacaciones año tras año.
+              <span className="block text-xs text-muted-foreground mt-1 italic">
+                (Haz doble clic en una barra para navegar a ese año)
+              </span>
             </DialogDescription>
           </DialogHeader>
           
           <div className="flex-1 w-full mt-8 min-h-0 overflow-x-auto">
             <div className="min-w-[1000px] h-full">
               <ChartContainer config={chartConfig} className="w-full h-full">
-                <BarChart data={yearlyStatsBreakdown} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                <BarChart 
+                  data={yearlyStatsBreakdown} 
+                  margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
+                  onClick={handleChartClick}
+                  style={{ cursor: 'pointer' }}
+                >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                   <XAxis 
                     dataKey="year" 
