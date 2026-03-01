@@ -38,7 +38,8 @@ import {
   XAxis, 
   YAxis,
   Cell,
-  ReferenceLine
+  ReferenceLine,
+  Legend
 } from "recharts";
 import { 
   format, 
@@ -66,7 +67,8 @@ import {
   BarChart3,
   ListTodo,
   MousePointer2,
-  History
+  History,
+  TrendingUp
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { DayType } from "@/lib/types";
@@ -100,6 +102,7 @@ export function Dashboard() {
   const [showClassicTravelDays, setShowClassicTravelDays] = useState(false);
   const [blockEditorOpen, setBlockEditorOpen] = useState(false);
   const [yearlyStatsDialogOpen, setYearlyStatsDialogOpen] = useState(false);
+  const [currentYearStatsDialogOpen, setCurrentYearStatsDialogOpen] = useState(false);
   const [blockData, setBlockData] = useState<{
     startDate: string;
     duration: number;
@@ -153,6 +156,34 @@ export function Dashboard() {
       NORMAL: Math.max(0, totalDays - occupied)
     };
   }, [events, currentDate, view]);
+
+  // Monthly breakdown for the current year (for the currentYearStatsDialog)
+  const monthlyStatsForCurrentYear = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const months = eachMonthOfInterval({
+      start: startOfYear(currentDate),
+      end: endOfYear(currentDate),
+    });
+
+    return months.map((month) => {
+      const monthKey = format(month, "yyyy-MM");
+      const raw = Object.entries(events).reduce((acc, [dateKey, event]) => {
+        if (dateKey.startsWith(monthKey)) {
+          acc[event.dayType] = (acc[event.dayType] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+
+      return {
+        month: format(month, "MMM", { locale: es }),
+        VACATION: raw.VACATION || 0,
+        TRAVEL_ENTRY: raw.TRAVEL_ENTRY || 0,
+        ROTATION: raw.ROTATION || 0,
+        TRAVEL_EXIT: raw.TRAVEL_EXIT || 0,
+        STANDBY: raw.STANDBY || 0,
+      };
+    });
+  }, [events, currentDate]);
 
   // Global Stats Year by Year for Historico
   const yearlyStatsBreakdown = useMemo(() => {
@@ -481,13 +512,17 @@ export function Dashboard() {
               />
             )}
             
-            <Card className="shadow-sm border-muted transition-colors select-none">
+            <Card 
+              className="shadow-sm border-muted transition-all select-none cursor-pointer hover:bg-muted/5 group"
+              onClick={() => setCurrentYearStatsDialogOpen(true)}
+            >
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-primary" />
                     Estadísticas {periodLabel}
                   </div>
+                  <TrendingUp className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -526,12 +561,15 @@ export function Dashboard() {
                   </div>
                   <span className="text-sm font-bold text-slate-700">{stats.STANDBY} d</span>
                 </div>
+                <p className="text-[9px] text-center text-muted-foreground italic pt-1">
+                  Haz clic para ver gráfica detallada
+                </p>
               </CardContent>
             </Card>
 
             <Card className={cn(
-              "shadow-sm border-muted flex flex-col",
-              view === "annual" ? "h-[calc(100vh-28rem)] min-h-[400px]" : "h-auto"
+              "shadow-sm border-muted flex flex-col transition-all",
+              view === "annual" ? "max-h-[calc(100vh-28rem)] h-fit" : "h-auto"
             )}>
               <CardHeader className="pb-3 shrink-0">
                 <CardTitle className="text-sm font-semibold flex items-center justify-between">
@@ -688,7 +726,47 @@ export function Dashboard() {
         onSave={resyncChain}
       />
 
-      {/* Yearly Breakdown Dialog */}
+      {/* Current Year Detailed Stats Dialog */}
+      <Dialog open={currentYearStatsDialogOpen} onOpenChange={setCurrentYearStatsDialogOpen}>
+        <DialogContent className="max-w-[95vw] w-full md:max-w-4xl h-auto rounded-3xl border-none shadow-2xl flex flex-col p-6 sm:p-10">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+              <BarChart3 className="w-6 h-6 text-primary" />
+              Desglose Mensual {currentDate.getFullYear()}
+            </DialogTitle>
+            <DialogDescription>
+              Resumen visual de los días trabajados y de descanso mes a mes.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 w-full mt-6 h-[400px]">
+            <ChartContainer config={chartConfig} className="w-full h-full">
+              <BarChart data={monthlyStatsForCurrentYear} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 11, fontWeight: 600 }}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 11, fontWeight: 600 }}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="TRAVEL_ENTRY" name="V. Entrada" stackId="a" fill={CHART_COLORS.TRAVEL_ENTRY} />
+                <Bar dataKey="ROTATION" name="Rotación" stackId="a" fill={CHART_COLORS.ROTATION} />
+                <Bar dataKey="TRAVEL_EXIT" name="V. Salida" stackId="a" fill={CHART_COLORS.TRAVEL_EXIT} />
+                <Bar dataKey="VACATION" name="Vacaciones" stackId="a" fill={CHART_COLORS.VACATION} />
+                <Bar dataKey="STANDBY" name="Standby" stackId="a" fill={CHART_COLORS.STANDBY} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Yearly Breakdown Dialog (History) */}
       <Dialog open={yearlyStatsDialogOpen} onOpenChange={setYearlyStatsDialogOpen}>
         <DialogContent className="max-w-[95vw] w-full md:max-w-[90vw] h-[90vh] rounded-3xl border-none shadow-2xl flex flex-col p-6 sm:p-10">
           <DialogHeader className="shrink-0">
@@ -733,7 +811,7 @@ export function Dashboard() {
                     strokeDasharray="3 3" 
                     label={{ position: 'right', value: '180d', fill: 'hsl(var(--muted-foreground))', fontSize: 10, fontWeight: 'bold' }} 
                   />
-                  <Bar dataKey="TRAVEL_ENTRY" name="V. Entrada" stackId="a" fill={CHART_COLORS.TRAVEL_ENTRY} radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="TRAVEL_ENTRY" name="V. Entrada" stackId="a" fill={CHART_COLORS.TRAVEL_ENTRY} />
                   <Bar dataKey="ROTATION" name="Rotación" stackId="a" fill={CHART_COLORS.ROTATION} />
                   <Bar dataKey="TRAVEL_EXIT" name="V. Salida" stackId="a" fill={CHART_COLORS.TRAVEL_EXIT} />
                   <Bar dataKey="VACATION" name="Vacaciones" stackId="a" fill={CHART_COLORS.VACATION} />
