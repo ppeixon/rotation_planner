@@ -7,7 +7,7 @@ import { Dashboard } from "@/components/Dashboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, ShieldCheck, Globe, Zap, Lock } from "lucide-react";
+import { Globe, Lock } from "lucide-react";
 
 function HomePage() {
   const { user, loading, login } = useAuth();
@@ -38,22 +38,14 @@ function HomePage() {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center font-body">
       <div className="max-w-4xl w-full grid md:grid-cols-2 gap-12 items-center">
         <div className="text-left space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 font-semibold text-xs uppercase tracking-wider">
-            <Zap className="w-3 h-3" /> Exclusivo para Argelia
-          </div>
           <h1 className="text-5xl md:text-6xl font-headline font-bold tracking-tight text-foreground leading-tight">
-            Tus Rotaciones <span className="text-primary underline decoration-primary/20">Simplificadas.</span>
+            Calendario de Rotaciones <span className="text-primary underline decoration-primary/20">Simplificado.</span>
           </h1>
           <p className="text-lg text-muted-foreground leading-relaxed">
-            Gestiona tus bloques de 28 días, vuelos y vacaciones en tiempo real. Accede desde cualquier lugar y sincroniza tus planes con la nube.
+            Herramienta para la gestión del calendario de rotación, viajes y vacaciones. Información en la nube vía web app.
           </p>
           
-          <div className="grid grid-cols-2 gap-4 pt-4">
-            <div className="flex flex-col gap-1">
-               <ShieldCheck className="w-5 h-5 text-primary" />
-               <h4 className="font-bold text-sm">Privacidad Total</h4>
-               <p className="text-xs text-muted-foreground">Solo tú puedes acceder a tus datos.</p>
-            </div>
+          <div className="grid grid-cols-1 gap-4 pt-4">
             <div className="flex flex-col gap-1">
                <Globe className="w-5 h-5 text-primary" />
                <h4 className="font-bold text-sm">Multi-dispositivo</h4>
@@ -108,7 +100,7 @@ function HomePage() {
              </form>
 
              <p className="text-[10px] text-muted-foreground mt-6 italic text-center leading-tight">
-               * El acceso está configurado exclusivamente para la cuenta autorizada del administrador.
+               * El acceso está configurado para la cuenta del administrador y visitantes autorizados.
              </p>
           </div>
         </div>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -11,8 +12,9 @@ import { Input } from "@/components/ui/input";
 import { DayEvent, DayType } from "@/lib/types";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { Plane, Calendar as CalendarIcon, StickyNote, X } from "lucide-react";
+import { Plane, Calendar as CalendarIcon, StickyNote, X, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface DayEditorProps {
   date: string | null;
@@ -22,6 +24,7 @@ interface DayEditorProps {
 }
 
 export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
+  const { isReadOnly } = useAuth();
   const [dayType, setDayType] = useState<DayType>("ROTATION");
   const [ticketPurchased, setTicketPurchased] = useState(false);
   const [ticketPending, setTicketPending] = useState(false);
@@ -47,6 +50,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
   if (!date) return null;
 
   const handleSave = () => {
+    if (isReadOnly) return;
     onSave(date, {
       dayType,
       flightTicketPurchased: ticketPurchased,
@@ -76,9 +80,17 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
         </DialogHeader>
 
         <div className="grid gap-6 py-4">
+          {isReadOnly && (
+            <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-xs font-medium">
+              <AlertCircle className="w-4 h-4" />
+              Modo Solo Lectura: No puedes realizar cambios.
+            </div>
+          )}
+
           <div className="space-y-3">
             <Label className="text-base font-semibold">Tipo de día</Label>
             <RadioGroup
+              disabled={isReadOnly}
               value={dayType}
               onValueChange={(val) => setDayType(val as DayType)}
               className="grid grid-cols-2 gap-2"
@@ -91,7 +103,8 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
                     className={cn(
                       "flex items-center justify-center h-12 rounded-lg border-2 cursor-pointer text-xs font-bold transition-all px-2 text-center",
                       opt.className,
-                      dayType === opt.value ? "ring-2 ring-primary ring-offset-2 scale-[1.02]" : "border-transparent opacity-80 hover:opacity-100"
+                      dayType === opt.value ? "ring-2 ring-primary ring-offset-2 scale-[1.02]" : "border-transparent opacity-80 hover:opacity-100",
+                      isReadOnly && "cursor-default"
                     )}
                   >
                     {opt.label}
@@ -110,6 +123,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
                 </div>
                 <Switch
                   id="ticket"
+                  disabled={isReadOnly}
                   checked={ticketPurchased}
                   onCheckedChange={(val) => {
                     setTicketPurchased(val);
@@ -125,6 +139,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
                 </div>
                 <Switch
                   id="pending"
+                  disabled={isReadOnly}
                   checked={ticketPending}
                   onCheckedChange={(val) => {
                     setTicketPending(val);
@@ -137,6 +152,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
                 <Label htmlFor="flightInfo" className="text-sm">Travel Ticket Info</Label>
                 <Input
                   id="flightInfo"
+                  disabled={isReadOnly}
                   placeholder="Vuelo AH2004, 15:30h..."
                   value={flightInfo}
                   onChange={(e) => setFlightInfo(e.target.value)}
@@ -152,6 +168,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
             </div>
             <Textarea
               id="notes"
+              disabled={isReadOnly}
               placeholder="Añadir notas adicionales..."
               className="min-h-[100px]"
               value={notes}
@@ -161,8 +178,12 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave}>Guardar cambios</Button>
+          <Button variant="outline" onClick={onClose}>
+            {isReadOnly ? "Cerrar" : "Cancelar"}
+          </Button>
+          {!isReadOnly && (
+            <Button onClick={handleSave}>Guardar cambios</Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -15,7 +16,7 @@ import {
 } from "date-fns";
 
 export function useRotation() {
-  const { user } = useAuth();
+  const { user, isReadOnly } = useAuth();
   const db = useFirestore();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [events, setEvents] = useState<Record<string, DayEvent>>({});
@@ -33,7 +34,7 @@ export function useRotation() {
     const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
       if (docSnap.exists()) {
         setSettings(docSnap.data() as UserSettings);
-      } else {
+      } else if (!isReadOnly) {
         const defaultSettings: UserSettings = {
           id: "profile",
           userId: user.uid,
@@ -60,10 +61,10 @@ export function useRotation() {
       unsubSettings();
       unsubEvents();
     };
-  }, [user, db]);
+  }, [user, db, isReadOnly]);
 
   const updateDay = useCallback((dateKey: string, partial: Partial<DayEvent>) => {
-    if (!user || !db) return;
+    if (!user || !db || isReadOnly) return;
     const dayRef = doc(db, "users", user.uid, "dayEvents", dateKey);
     const existing = events[dateKey];
     
@@ -83,7 +84,7 @@ export function useRotation() {
     };
     
     setDocumentNonBlocking(dayRef, newEvent, { merge: true });
-  }, [user, db, events]);
+  }, [user, db, events, isReadOnly]);
 
   const fillRestOfYearBatch = (batch: any, current: Date, state: "VAC" | "TE" | "ROT" | "TX", currentYear: number, endGen: Date, userId: string) => {
     let iterDate = current;
@@ -93,7 +94,6 @@ export function useRotation() {
       const existing = events[dateKey];
 
       if (existing?.source === "MANUAL") {
-        // Skip manual overrides but advance the date and state
         if (state === "VAC") {
            iterDate = addDays(iterDate, 26);
            state = "TE";
@@ -161,7 +161,7 @@ export function useRotation() {
   };
 
   const generateRotations = useCallback((startDateKey: string, initialType: string, initialDuration: number) => {
-    if (!user || !db) return;
+    if (!user || !db || isReadOnly) return;
     const batch = writeBatch(db);
     let current = startOfDay(parseISO(startDateKey));
     const currentYear = current.getFullYear();
@@ -186,10 +186,10 @@ export function useRotation() {
 
     fillRestOfYearBatch(batch, current, nextState, currentYear, endGen, user.uid);
     batch.commit();
-  }, [user, db, events]);
+  }, [user, db, events, isReadOnly]);
 
   const resyncChain = useCallback((anchorDate: string, newDuration: number, type: DayType) => {
-    if (!user || !db) return;
+    if (!user || !db || isReadOnly) return;
     const batch = writeBatch(db);
     let current = startOfDay(parseISO(anchorDate));
     const currentYear = current.getFullYear();
@@ -207,17 +207,16 @@ export function useRotation() {
     let nextState: "VAC" | "TE" | "ROT" | "TX" | null = null;
     if (type === "VACATION") nextState = "TE";
     else if (type === "ROTATION") nextState = "TX";
-    // For STANDBY we do NOT set nextState, so fillRestOfYearBatch is not called
 
     if (nextState) {
       fillRestOfYearBatch(batch, current, nextState, currentYear, endGen, user.uid);
     }
     
     batch.commit();
-  }, [user, db, events]);
+  }, [user, db, events, isReadOnly]);
 
   const clearYear = useCallback((year: number) => {
-    if (!user || !db) return;
+    if (!user || !db || isReadOnly) return;
     const batch = writeBatch(db);
     const yearPrefix = year.toString();
     
@@ -228,7 +227,7 @@ export function useRotation() {
     });
     
     batch.commit();
-  }, [user, db, events]);
+  }, [user, db, events, isReadOnly]);
 
   return { settings, events, loading, updateDay, generateRotations, resyncChain, clearYear };
 }

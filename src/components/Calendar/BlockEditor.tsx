@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { format, parseISO, addDays, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { Settings2, Info, Plane, Plus, Minus, CalendarDays, Clock } from "lucide-react";
+import { Settings2, Info, Plane, Plus, Minus, CalendarDays, Clock, AlertCircle } from "lucide-react";
 import { DayType } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface BlockEditorProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ interface BlockEditorProps {
 }
 
 export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type, onSave }: BlockEditorProps) {
+  const { isReadOnly } = useAuth();
   const [duration, setDuration] = useState(currentDuration);
 
   const start = useMemo(() => (startDate ? startOfDay(parseISO(startDate)) : null), [startDate]);
@@ -35,6 +37,7 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
   if (!start) return null;
 
   const handleSave = () => {
+    if (isReadOnly) return;
     onSave(startDate!, duration, type);
     onClose();
   };
@@ -56,11 +59,21 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
             Configurar {typeLabel}
           </DialogTitle>
           <DialogDescription className="text-sm">
-            Ajusta la duración del bloque de {typeLabel.toLowerCase()}.
+            {isReadOnly 
+              ? "Vista de configuración de bloque (Solo lectura)." 
+              : `Ajusta la duración del bloque de ${typeLabel.toLowerCase()}.`
+            }
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-8 py-6">
+          {isReadOnly && (
+            <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-xs font-medium">
+              <AlertCircle className="w-4 h-4" />
+              Modo Solo Lectura: No puedes realizar cambios.
+            </div>
+          )}
+
           {/* Resumen de Fechas */}
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1 p-4 bg-muted/40 rounded-2xl border border-muted">
@@ -98,6 +111,7 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
             
             <div className="flex items-center justify-center gap-6">
               <Button
+                disabled={isReadOnly}
                 variant="outline"
                 size="icon"
                 onClick={() => setDuration(Math.max(1, duration - 1))}
@@ -114,6 +128,7 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
               </div>
 
               <Button
+                disabled={isReadOnly}
                 variant="outline"
                 size="icon"
                 onClick={() => setDuration(duration + 1)}
@@ -138,11 +153,13 @@ export function BlockEditor({ isOpen, onClose, startDate, currentDuration, type,
 
         <DialogFooter className="gap-2 sm:gap-0 mt-2">
           <Button variant="ghost" onClick={onClose} className="rounded-xl h-12 font-semibold">
-            Cancelar
+            {isReadOnly ? "Cerrar" : "Cancelar"}
           </Button>
-          <Button onClick={handleSave} className="rounded-xl h-12 px-10 font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform">
-            Guardar y Sincronizar
-          </Button>
+          {!isReadOnly && (
+            <Button onClick={handleSave} className="rounded-xl h-12 px-10 font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform">
+              Guardar y Sincronizar
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

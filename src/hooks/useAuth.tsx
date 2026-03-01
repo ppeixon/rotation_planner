@@ -9,14 +9,17 @@ import { useToast } from "@/hooks/use-toast";
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isReadOnly: boolean;
   login: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ALLOWED_EMAIL = "pepe.galan.chiner@gmail.com";
-const REQUIRED_PASSWORD = "jogachi";
+const ADMIN_EMAIL = "pepe.galan.chiner@gmail.com";
+const ADMIN_PASSWORD = "jogachi";
+const VISITOR_EMAIL = "acceso@visitante.com";
+const VISITOR_PASSWORD = "visitante";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const auth = useFirebaseAuth();
@@ -24,9 +27,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const isReadOnly = user?.email === VISITOR_EMAIL;
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser && firebaseUser.email === ALLOWED_EMAIL) {
+      if (firebaseUser && (firebaseUser.email === ADMIN_EMAIL || firebaseUser.email === VISITOR_EMAIL)) {
         setUser(firebaseUser);
       } else {
         setUser(null);
@@ -39,20 +44,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, pass: string) => {
     const cleanEmail = email.trim().toLowerCase();
     
-    if (cleanEmail !== ALLOWED_EMAIL) {
+    const isAllowedAdmin = cleanEmail === ADMIN_EMAIL && pass === ADMIN_PASSWORD;
+    const isAllowedVisitor = cleanEmail === VISITOR_EMAIL && pass === VISITOR_PASSWORD;
+
+    if (!isAllowedAdmin && !isAllowedVisitor) {
       toast({
         variant: "destructive",
         title: "Acceso denegado",
-        description: "Este usuario no tiene permiso para acceder a la aplicación."
-      });
-      return;
-    }
-
-    if (pass !== REQUIRED_PASSWORD) {
-      toast({
-        variant: "destructive",
-        title: "Contraseña incorrecta",
-        description: "La contraseña introducida no es válida para el administrador."
+        description: "Credenciales incorrectas o usuario no autorizado."
       });
       return;
     }
@@ -64,14 +63,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           await createUserWithEmailAndPassword(auth, cleanEmail, pass);
           toast({
-            title: "Bienvenido",
-            description: "Tu cuenta de administrador ha sido configurada correctamente."
+            title: isAllowedAdmin ? "Bienvenido Administrador" : "Acceso Visitante",
+            description: isAllowedAdmin 
+              ? "Tu cuenta ha sido configurada correctamente." 
+              : "Has accedido en modo de solo lectura."
           });
         } catch (regError: any) {
           toast({
             variant: "destructive",
             title: "Error de configuración",
-            description: "No se pudo crear el perfil de administrador en el sistema."
+            description: "No se pudo crear el perfil en el sistema."
           });
         }
       } else {
@@ -89,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, isReadOnly, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
