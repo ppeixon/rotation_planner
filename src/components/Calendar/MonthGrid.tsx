@@ -89,46 +89,46 @@ export const MonthGrid = React.memo(function MonthGrid({
 
             const dayContent = (
               <div
-                onClick={() => !isDragging && onDayClick(day)}
-                onDoubleClick={() => !isDragging && onDayDoubleClick?.(day)}
+                onClick={() => isCurrentMonth && !isDragging && onDayClick(day)}
+                onDoubleClick={() => isCurrentMonth && !isDragging && onDayDoubleClick?.(day)}
                 onMouseDown={(e) => {
-                  if (isTravelDay && onDayMouseDown) {
+                  if (isCurrentMonth && isTravelDay && onDayMouseDown) {
                     e.preventDefault();
                     onDayMouseDown(day, dayType!);
                   }
                 }}
-                onMouseEnter={() => isDragging && onDayMouseEnter && onDayMouseEnter(day)}
+                onMouseEnter={() => isCurrentMonth && isDragging && onDayMouseEnter && onDayMouseEnter(day)}
                 className={cn(
-                  "relative bg-background transition-colors duration-75 flex flex-col items-center justify-center group",
-                  !isCurrentMonth && "bg-muted/30 text-muted-foreground opacity-50",
+                  "relative transition-colors duration-75 flex flex-col items-center justify-center group",
+                  !isCurrentMonth ? "bg-background text-background pointer-events-none" : cn("bg-background", colorClass),
                   mini ? "aspect-square py-1" : "aspect-square sm:aspect-auto sm:min-h-[80px] p-1",
-                  colorClass,
-                  isTravelDay && !mini && "cursor-grab active:cursor-grabbing",
-                  isDragTarget && "ring-2 ring-primary ring-inset z-20",
-                  !isDragging && "hover:bg-accent/10 cursor-pointer"
+                  isCurrentMonth && isTravelDay && !mini && "cursor-grab active:cursor-grabbing",
+                  isCurrentMonth && isDragTarget && "ring-2 ring-primary ring-inset z-20",
+                  isCurrentMonth && !isDragging && "hover:bg-accent/10 cursor-pointer"
                 )}
               >
                 <span className={cn(
                   "text-xs sm:text-sm font-medium z-10",
-                  isTodayDay && "bg-accent text-accent-foreground rounded-full w-6 h-6 flex items-center justify-center"
+                  isCurrentMonth && isTodayDay && "bg-accent text-accent-foreground rounded-full w-6 h-6 flex items-center justify-center",
+                  !isCurrentMonth && "hidden"
                 )}>
                   {format(day, "d")}
                 </span>
                 
-                {!mini && isCurrentMonth && isTravelDay && !isDragging && (
+                {isCurrentMonth && !mini && isTravelDay && !isDragging && (
                   <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <MoveHorizontal className="w-3 h-3 text-current" />
                   </div>
                 )}
 
-                {!mini && isCurrentMonth && event && (
+                {isCurrentMonth && !mini && event && (
                   <div className="absolute bottom-1 right-1 flex gap-0.5">
                      {event.flightTicketPurchased && <Plane className={cn("w-3 h-3", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY") ? "text-current fill-current" : "text-white fill-white")} />}
                      {event.notes && <StickyNote className={cn("w-3 h-3", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY") ? "text-current fill-current" : "text-white fill-white")} />}
                   </div>
                 )}
 
-                {mini && isCurrentMonth && event && (
+                {isCurrentMonth && mini && event && (
                   <div className="absolute top-0 right-0 p-0.5">
                     {(event.flightTicketPurchased || event.notes) && <div className={cn("w-1 h-1 rounded-full", (event.dayType === "VACATION" || event.dayType === "ROTATION" || event.dayType === "TRAVEL_EXIT" || event.dayType === "STANDBY" || event.dayType === "TRAVEL_ENTRY") ? "bg-current" : "bg-white")} />}
                   </div>
@@ -136,7 +136,7 @@ export const MonthGrid = React.memo(function MonthGrid({
               </div>
             );
 
-            if (event?.notes && isCurrentMonth) {
+            if (isCurrentMonth && event?.notes) {
               return (
                 <Tooltip key={dateKey}>
                   <TooltipTrigger asChild>
