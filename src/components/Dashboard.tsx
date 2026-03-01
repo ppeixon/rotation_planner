@@ -66,7 +66,6 @@ import {
   BarChart3,
   ListTodo,
   MousePointer2,
-  Globe2,
   History
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -100,7 +99,6 @@ export function Dashboard() {
   const [showTravelDays, setShowTravelDays] = useState(false);
   const [blockEditorOpen, setBlockEditorOpen] = useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = useState(false);
-  const [globalStatsDialogOpen, setGlobalStatsDialogOpen] = useState(false);
   const [yearlyStatsDialogOpen, setYearlyStatsDialogOpen] = useState(false);
   const [blockData, setBlockData] = useState<{
     startDate: string;
@@ -154,25 +152,6 @@ export function Dashboard() {
     };
   }, [events, currentDate, view]);
 
-  // Global Stats since 2013
-  const globalStats = useMemo(() => {
-    const raw = Object.entries(events).reduce((acc, [dateKey, event]) => {
-      const year = parseInt(dateKey.substring(0, 4));
-      if (year >= 2013) {
-        acc[event.dayType] = (acc[event.dayType] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
-
-    return {
-      VACATION: raw.VACATION || 0,
-      TRAVEL_ENTRY: raw.TRAVEL_ENTRY || 0,
-      ROTATION: raw.ROTATION || 0,
-      TRAVEL_EXIT: raw.TRAVEL_EXIT || 0,
-      STANDBY: raw.STANDBY || 0,
-    };
-  }, [events]);
-
   // Global Stats Year by Year
   const yearlyStatsBreakdown = useMemo(() => {
     const years: Record<number, Record<string, number>> = {};
@@ -204,14 +183,6 @@ export function Dashboard() {
     { name: "V. Salida", value: stats.TRAVEL_EXIT, type: "TRAVEL_EXIT" },
     { name: "Standby", value: stats.STANDBY, type: "STANDBY" },
   ], [stats]);
-
-  const globalChartData = useMemo(() => [
-    { name: "Vacaciones", value: globalStats.VACATION, type: "VACATION" },
-    { name: "V. Entrada", value: globalStats.TRAVEL_ENTRY, type: "TRAVEL_ENTRY" },
-    { name: "Rotación", value: globalStats.ROTATION, type: "ROTATION" },
-    { name: "V. Salida", value: globalStats.TRAVEL_EXIT, type: "TRAVEL_EXIT" },
-    { name: "Standby", value: globalStats.STANDBY, type: "STANDBY" },
-  ], [globalStats]);
 
   const blocksInYear = useMemo(() => {
     const yearStr = format(currentDate, "yyyy");
@@ -621,14 +592,6 @@ export function Dashboard() {
               <div className="flex items-center gap-2">
                 <Button 
                   variant="outline" 
-                  onClick={() => setGlobalStatsDialogOpen(true)}
-                  className="gap-2 rounded-full border-primary/20 hover:bg-primary/5 hover:border-primary/40 text-xs font-bold uppercase tracking-widest h-10 px-6 transition-all"
-                >
-                  <Globe2 className="w-4 h-4 text-primary" />
-                  Estadísticas Globales
-                </Button>
-                <Button 
-                  variant="outline" 
                   onClick={() => setYearlyStatsDialogOpen(true)}
                   className="gap-2 rounded-full border-primary/20 hover:bg-primary/5 hover:border-primary/40 text-xs font-bold uppercase tracking-widest h-10 px-6 transition-all"
                 >
@@ -745,61 +708,6 @@ export function Dashboard() {
                 <div className="w-4 h-4 rounded-full" style={{ backgroundColor: CHART_COLORS[item.type] }} />
                 <span className="text-xs font-bold uppercase text-muted-foreground tracking-widest">{item.name}</span>
                 <span className="text-2xl font-black text-foreground">{item.value} d</span>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Global Stats Dialog */}
-      <Dialog open={globalStatsDialogOpen} onOpenChange={setGlobalStatsDialogOpen}>
-        <DialogContent className="max-w-[95vw] w-full md:max-w-[80vw] h-[85vh] rounded-3xl border-none shadow-2xl flex flex-col p-6 sm:p-10">
-          <DialogHeader className="shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-3xl font-bold">
-              <Globe2 className="w-8 h-8 text-primary" />
-              Estadísticas Globales (Histórico)
-            </DialogTitle>
-            <DialogDescription className="text-lg">
-              Total acumulado desde 2013 hasta el último año con datos registrados.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="flex-1 w-full mt-8 min-h-0">
-            <ChartContainer config={chartConfig} className="w-full h-full">
-              <BarChart data={globalChartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 14, fontWeight: 700 }}
-                  dy={15}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 14, fontWeight: 700 }}
-                />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar 
-                  dataKey="value" 
-                  radius={[12, 12, 0, 0]} 
-                  barSize={120}
-                >
-                  {globalChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={CHART_COLORS[entry.type]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ChartContainer>
-          </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-8 shrink-0">
-            {globalChartData.map((item) => (
-              <div key={item.type} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 border border-muted/50">
-                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: CHART_COLORS[item.type] }} />
-                <span className="text-xs font-bold uppercase text-muted-foreground tracking-widest">{item.name}</span>
-                <span className="text-2xl font-black text-foreground">{item.value.toLocaleString()} d</span>
               </div>
             ))}
           </div>
