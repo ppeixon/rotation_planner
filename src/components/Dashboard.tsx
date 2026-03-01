@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
@@ -36,7 +37,6 @@ import {
   CartesianGrid, 
   XAxis, 
   YAxis,
-  ResponsiveContainer,
   Cell
 } from "recharts";
 import { 
@@ -65,7 +65,7 @@ import {
   BarChart3,
   ListTodo,
   MousePointer2,
-  Plane
+  Globe2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { DayType } from "@/lib/types";
@@ -98,6 +98,7 @@ export function Dashboard() {
   const [showTravelDays, setShowTravelDays] = useState(true);
   const [blockEditorOpen, setBlockEditorOpen] = useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = useState(false);
+  const [globalStatsDialogOpen, setGlobalStatsDialogOpen] = useState(false);
   const [blockData, setBlockData] = useState<{
     startDate: string;
     duration: number;
@@ -115,7 +116,7 @@ export function Dashboard() {
   // Timer for single/double click distinction
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 1. Hooks first - all data calculations
+  // Stats for current view
   const stats = useMemo(() => {
     const periodPrefix = view === "annual" ? format(currentDate, "yyyy") : format(currentDate, "yyyy-MM");
     const raw = Object.entries(events).reduce((acc, [dateKey, event]) => {
@@ -150,6 +151,25 @@ export function Dashboard() {
     };
   }, [events, currentDate, view]);
 
+  // Global Stats since 2013
+  const globalStats = useMemo(() => {
+    const raw = Object.entries(events).reduce((acc, [dateKey, event]) => {
+      const year = parseInt(dateKey.substring(0, 4));
+      if (year >= 2013) {
+        acc[event.dayType] = (acc[event.dayType] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    return {
+      VACATION: raw.VACATION || 0,
+      TRAVEL_ENTRY: raw.TRAVEL_ENTRY || 0,
+      ROTATION: raw.ROTATION || 0,
+      TRAVEL_EXIT: raw.TRAVEL_EXIT || 0,
+      STANDBY: raw.STANDBY || 0,
+    };
+  }, [events]);
+
   const chartData = useMemo(() => [
     { name: "Vacaciones", value: stats.VACATION, type: "VACATION" },
     { name: "V. Entrada", value: stats.TRAVEL_ENTRY, type: "TRAVEL_ENTRY" },
@@ -157,6 +177,14 @@ export function Dashboard() {
     { name: "V. Salida", value: stats.TRAVEL_EXIT, type: "TRAVEL_EXIT" },
     { name: "Standby", value: stats.STANDBY, type: "STANDBY" },
   ], [stats]);
+
+  const globalChartData = useMemo(() => [
+    { name: "Vacaciones", value: globalStats.VACATION, type: "VACATION" },
+    { name: "V. Entrada", value: globalStats.TRAVEL_ENTRY, type: "TRAVEL_ENTRY" },
+    { name: "Rotación", value: globalStats.ROTATION, type: "ROTATION" },
+    { name: "V. Salida", value: globalStats.TRAVEL_EXIT, type: "TRAVEL_EXIT" },
+    { name: "Standby", value: globalStats.STANDBY, type: "STANDBY" },
+  ], [globalStats]);
 
   const blocksInYear = useMemo(() => {
     const yearStr = format(currentDate, "yyyy");
@@ -541,7 +569,7 @@ export function Dashboard() {
           </aside>
 
           <section className="flex-1 space-y-6">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <Tabs value={view} onValueChange={(v) => setView(v as "annual" | "monthly")} className="md:hidden w-full">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="monthly">Mes</TabsTrigger>
@@ -549,15 +577,28 @@ export function Dashboard() {
                 </TabsList>
               </Tabs>
 
-              <div className="flex items-center gap-4 bg-card px-4 py-2 rounded-full border shadow-sm mx-auto md:mx-0">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prev}>
-                  <ChevronLeft className="w-5 h-5" />
-                </Button>
-                <h2 className="font-headline font-bold text-base min-w-[140px] text-center uppercase tracking-wide">
-                  {view === "monthly" ? format(currentDate, "MMMM yyyy", { locale: es }) : format(currentDate, "yyyy")}
-                </h2>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={next}>
-                  <ChevronRight className="w-5 h-5" />
+              <div className="flex-1 flex justify-start md:justify-start">
+                <div className="flex items-center gap-4 bg-card px-4 py-2 rounded-full border shadow-sm">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prev}>
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                  <h2 className="font-headline font-bold text-base min-w-[140px] text-center uppercase tracking-wide">
+                    {view === "monthly" ? format(currentDate, "MMMM yyyy", { locale: es }) : format(currentDate, "yyyy")}
+                  </h2>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={next}>
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setGlobalStatsDialogOpen(true)}
+                  className="gap-2 rounded-full border-primary/20 hover:bg-primary/5 hover:border-primary/40 text-xs font-bold uppercase tracking-widest h-10 px-6 transition-all"
+                >
+                  <Globe2 className="w-4 h-4 text-primary" />
+                  Estadísticas Globales
                 </Button>
               </div>
             </div>
@@ -620,6 +661,7 @@ export function Dashboard() {
         onSave={resyncChain}
       />
 
+      {/* View Specific Stats Dialog */}
       <Dialog open={statsDialogOpen} onOpenChange={setStatsDialogOpen}>
         <DialogContent className="max-w-[95vw] w-full md:max-w-[80vw] h-[85vh] rounded-3xl border-none shadow-2xl flex flex-col p-6 sm:p-10">
           <DialogHeader className="shrink-0">
@@ -668,6 +710,61 @@ export function Dashboard() {
                 <div className="w-4 h-4 rounded-full" style={{ backgroundColor: CHART_COLORS[item.type] }} />
                 <span className="text-xs font-bold uppercase text-muted-foreground tracking-widest">{item.name}</span>
                 <span className="text-2xl font-black text-foreground">{item.value} d</span>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Global Stats Dialog */}
+      <Dialog open={globalStatsDialogOpen} onOpenChange={setGlobalStatsDialogOpen}>
+        <DialogContent className="max-w-[95vw] w-full md:max-w-[80vw] h-[85vh] rounded-3xl border-none shadow-2xl flex flex-col p-6 sm:p-10">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-3xl font-bold">
+              <Globe2 className="w-8 h-8 text-primary" />
+              Estadísticas Globales (Histórico)
+            </DialogTitle>
+            <DialogDescription className="text-lg">
+              Total acumulado desde 2013 hasta el último año con datos registrados.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 w-full mt-8 min-h-0">
+            <ChartContainer config={chartConfig} className="w-full h-full">
+              <BarChart data={globalChartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 14, fontWeight: 700 }}
+                  dy={15}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 14, fontWeight: 700 }}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar 
+                  dataKey="value" 
+                  radius={[12, 12, 0, 0]} 
+                  barSize={120}
+                >
+                  {globalChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[entry.type]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+          </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-8 shrink-0">
+            {globalChartData.map((item) => (
+              <div key={item.type} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 border border-muted/50">
+                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: CHART_COLORS[item.type] }} />
+                <span className="text-xs font-bold uppercase text-muted-foreground tracking-widest">{item.name}</span>
+                <span className="text-2xl font-black text-foreground">{item.value.toLocaleString()} d</span>
               </div>
             ))}
           </div>
