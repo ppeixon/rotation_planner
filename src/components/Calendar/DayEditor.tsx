@@ -10,7 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { DayEvent, DayType } from "@/lib/types";
 import { format, parseISO } from "date-fns";
-import { Plane, Calendar as CalendarIcon, StickyNote } from "lucide-react";
+import { es } from "date-fns/locale";
+import { Plane, Calendar as CalendarIcon, StickyNote, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DayEditorProps {
   date: string | null;
@@ -22,6 +24,7 @@ interface DayEditorProps {
 export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
   const [dayType, setDayType] = useState<DayType>("ROTATION");
   const [ticketPurchased, setTicketPurchased] = useState(false);
+  const [ticketPending, setTicketPending] = useState(false);
   const [flightInfo, setFlightInfo] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -29,11 +32,13 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
     if (event) {
       setDayType(event.dayType);
       setTicketPurchased(event.flightTicketPurchased || false);
+      setTicketPending(event.flightTicketPending || false);
       setFlightInfo(event.flightInfo || "");
       setNotes(event.notes || "");
     } else {
       setDayType("ROTATION");
       setTicketPurchased(false);
+      setTicketPending(false);
       setFlightInfo("");
       setNotes("");
     }
@@ -45,11 +50,20 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
     onSave(date, {
       dayType,
       flightTicketPurchased: ticketPurchased,
+      flightTicketPending: ticketPending,
       flightInfo,
       notes,
     });
     onClose();
   };
+
+  const dayTypeOptions = [
+    { value: "ROTATION", label: "Rotación", className: "day-rotation" },
+    { value: "TRAVEL_EXIT", label: "Viaje Salida", className: "bg-[#ffff00] text-[#2B1A0A]" },
+    { value: "TRAVEL_ENTRY", label: "Viaje Entrada", className: "bg-[#3CB371] text-white" },
+    { value: "VACATION", label: "Vacaciones", className: "day-vacation" },
+    { value: "STANDBY", label: "Standby", className: "day-standby" },
+  ];
 
   return (
     <Dialog open={!!date} onOpenChange={(open) => !open && onClose()}>
@@ -57,7 +71,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarIcon className="w-5 h-5 text-primary" />
-            {format(parseISO(date), "PPP")}
+            <span className="capitalize">{format(parseISO(date), "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -69,41 +83,21 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
               onValueChange={(val) => setDayType(val as DayType)}
               className="grid grid-cols-2 gap-2"
             >
-              <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
-                <RadioGroupItem value="ROTATION" id="rotation" />
-                <Label htmlFor="rotation" className="flex items-center gap-2 cursor-pointer text-xs">
-                   <div className="w-3 h-3 rounded-full bg-[#ffc000]" />
-                   Rotación
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
-                <RadioGroupItem value="TRAVEL_EXIT" id="travel_exit" />
-                <Label htmlFor="travel_exit" className="flex items-center gap-2 cursor-pointer text-xs">
-                  <div className="w-3 h-3 rounded-full bg-[#ffff00]" />
-                  Viaje Salida
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
-                <RadioGroupItem value="TRAVEL_ENTRY" id="travel_entry" />
-                <Label htmlFor="travel_entry" className="flex items-center gap-2 cursor-pointer text-xs">
-                  <div className="w-3 h-3 rounded-full bg-[#3CB371]" />
-                  Viaje Entrada
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer">
-                <RadioGroupItem value="VACATION" id="vacation" />
-                <Label htmlFor="vacation" className="flex items-center gap-2 cursor-pointer text-xs">
-                  <div className="w-3 h-3 rounded-full bg-[#c6d9f1]" />
-                  Vacaciones
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5 transition-colors cursor-pointer col-span-2">
-                <RadioGroupItem value="STANDBY" id="standby" />
-                <Label htmlFor="standby" className="flex items-center gap-2 cursor-pointer text-xs">
-                  <div className="w-3 h-3 rounded-full bg-[#fee2e2]" />
-                  Standby
-                </Label>
-              </div>
+              {dayTypeOptions.map((opt) => (
+                <div key={opt.value} className="relative">
+                  <RadioGroupItem value={opt.value} id={opt.value} className="sr-only" />
+                  <Label
+                    htmlFor={opt.value}
+                    className={cn(
+                      "flex items-center justify-center h-12 rounded-lg border-2 cursor-pointer text-xs font-bold transition-all px-2 text-center",
+                      opt.className,
+                      dayType === opt.value ? "ring-2 ring-primary ring-offset-2 scale-[1.02]" : "border-transparent opacity-80 hover:opacity-100"
+                    )}
+                  >
+                    {opt.label}
+                  </Label>
+                </div>
+              ))}
             </RadioGroup>
           </div>
 
@@ -117,9 +111,28 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
                 <Switch
                   id="ticket"
                   checked={ticketPurchased}
-                  onCheckedChange={setTicketPurchased}
+                  onCheckedChange={(val) => {
+                    setTicketPurchased(val);
+                    if (val) setTicketPending(false);
+                  }}
                 />
               </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <X className="w-4 h-4 text-destructive" />
+                  <Label htmlFor="pending">TICKET PENDIENTE</Label>
+                </div>
+                <Switch
+                  id="pending"
+                  checked={ticketPending}
+                  onCheckedChange={(val) => {
+                    setTicketPending(val);
+                    if (val) setTicketPurchased(false);
+                  }}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="flightInfo" className="text-sm">Travel Ticket Info</Label>
                 <Input

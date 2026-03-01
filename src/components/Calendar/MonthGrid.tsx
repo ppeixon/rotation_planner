@@ -14,7 +14,7 @@ import {
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DayEvent } from "@/lib/types";
-import { Plane, StickyNote, MoveHorizontal, Check } from "lucide-react";
+import { Plane, StickyNote, MoveHorizontal, Check, X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -168,11 +168,14 @@ export const MonthGrid = React.memo(function MonthGrid({
                 {/* Main View Indicators */}
                 {isCurrentMonth && !mini && event && (
                   <>
-                    {event.flightTicketPurchased && (
-                      <div className="absolute bottom-1 left-1 text-current">
+                    <div className="absolute bottom-1 left-1 text-current flex gap-0.5">
+                      {event.flightTicketPurchased && (
                         <Check className="w-3 h-3 stroke-[3]" />
-                      </div>
-                    )}
+                      )}
+                      {event.flightTicketPending && (
+                        <X className="w-3 h-3 stroke-[3] text-destructive" />
+                      )}
+                    </div>
                     {event.notes && (
                       <div className="absolute bottom-1 right-1 text-current">
                         <StickyNote className="w-3 h-3 fill-current" />
@@ -184,11 +187,14 @@ export const MonthGrid = React.memo(function MonthGrid({
                 {/* Mini View Indicators */}
                 {isCurrentMonth && mini && event && (
                   <>
-                    {event.flightTicketPurchased && (
-                      <div className="absolute bottom-0 left-0 p-0.5 text-current">
+                    <div className="absolute bottom-0 left-0 p-0.5 text-current flex gap-0.5">
+                      {event.flightTicketPurchased && (
                         <Check className="w-2 h-2 stroke-[4]" />
-                      </div>
-                    )}
+                      )}
+                      {event.flightTicketPending && (
+                        <X className="w-2 h-2 stroke-[4] text-destructive" />
+                      )}
+                    </div>
                     {event.notes && (
                       <div className="absolute bottom-0 right-0 p-0.5">
                         <div className="w-1 h-1 rounded-full bg-current" />
@@ -199,12 +205,29 @@ export const MonthGrid = React.memo(function MonthGrid({
               </div>
             );
 
-            // Conditional tooltip with priority: Travel Ticket Info > Notes > Ticket OK
-            const showTooltip = isCurrentMonth && (event?.notes || event?.flightInfo || event?.flightTicketPurchased);
+            // Conditional tooltip priority
+            const showTooltip = isCurrentMonth && (
+              event?.notes || 
+              event?.flightInfo || 
+              event?.flightTicketPurchased || 
+              event?.flightTicketPending
+            );
             
             if (showTooltip) {
-              const tooltipText = event?.flightInfo || event?.notes || (event?.flightTicketPurchased ? "Ticket OK" : "");
+              let tooltipText = "";
+              if (event?.flightTicketPending) {
+                tooltipText = "TICKET PENDIENTE de ser comprado";
+              } else if (event?.flightInfo) {
+                tooltipText = event.flightInfo;
+              } else if (event?.flightTicketPurchased) {
+                tooltipText = "Ticket OK";
+              }
               
+              // Si aún no hay texto de billete, usamos la nota
+              if (!tooltipText && event?.notes) {
+                tooltipText = event.notes;
+              }
+
               if (!tooltipText) return <React.Fragment key={dateKey}>{dayContent}</React.Fragment>;
 
               return (

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -74,6 +73,7 @@ export function useRotation() {
       dateKey,
       dayType: partial.dayType ?? existing?.dayType ?? "NORMAL",
       flightTicketPurchased: partial.flightTicketPurchased ?? existing?.flightTicketPurchased ?? false,
+      flightTicketPending: partial.flightTicketPending ?? existing?.flightTicketPending ?? false,
       flightInfo: partial.flightInfo ?? existing?.flightInfo ?? "",
       notes: partial.notes ?? existing?.notes ?? "",
       source: "MANUAL",
