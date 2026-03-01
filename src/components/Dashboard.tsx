@@ -53,7 +53,7 @@ export function Dashboard() {
     type: DayType;
   } | null>(null);
 
-  // Memoize blocks calculation to ensure consistent hook order
+  // Memoize blocks calculation BEFORE any conditional returns to respect Hook Rules
   const blocksInYear = useMemo(() => {
     const yearStr = format(currentDate, "yyyy");
     const yearEvents = Object.entries(events)
@@ -66,18 +66,41 @@ export function Dashboard() {
     let currentBlock: { type: DayType; start: string; duration: number } | null = null;
 
     yearEvents.forEach(([dateKey, event]) => {
-      if (currentBlock && currentBlock.type === event.dayType) {
-        currentBlock.duration++;
-      } else {
-        if (currentBlock && (currentBlock.type === "ROTATION" || currentBlock.type === "VACATION")) {
-          blocks.push(currentBlock);
+      const type = event.dayType;
+      
+      if (type === "VACATION" || type === "ROTATION") {
+        if (currentBlock && currentBlock.type === type) {
+          currentBlock.duration++;
+        } else {
+          if (currentBlock) blocks.push(currentBlock);
+          currentBlock = { type, start: dateKey, duration: 1 };
         }
-        currentBlock = { type: event.dayType, start: dateKey, duration: 1 };
+      } else if (type === "TRAVEL_ENTRY") {
+        // El día de entrada se suma visualmente al bloque de vacaciones anterior
+        if (currentBlock && currentBlock.type === "VACATION") {
+          currentBlock.duration++;
+          blocks.push(currentBlock);
+          currentBlock = null;
+        } else {
+          if (currentBlock) blocks.push(currentBlock);
+          currentBlock = null;
+        }
+      } else if (type === "TRAVEL_EXIT") {
+        // El día de salida se suma visualmente al bloque de rotación anterior
+        if (currentBlock && currentBlock.type === "ROTATION") {
+          currentBlock.duration++;
+          blocks.push(currentBlock);
+          currentBlock = null;
+        } else {
+          if (currentBlock) blocks.push(currentBlock);
+          currentBlock = null;
+        }
+      } else {
+        if (currentBlock) blocks.push(currentBlock);
+        currentBlock = null;
       }
     });
-    if (currentBlock && (currentBlock.type === "ROTATION" || currentBlock.type === "VACATION")) {
-      blocks.push(currentBlock);
-    }
+    if (currentBlock) blocks.push(currentBlock);
 
     return blocks;
   }, [events, currentDate]);
@@ -313,7 +336,7 @@ export function Dashboard() {
                         )} />
                         <div>
                           <p className="font-bold text-foreground">
-                            {block.type === "ROTATION" ? "Rotación" : "Vacaciones"}
+                            {block.type === "ROTATION" ? "Rotación + V. Salida" : "Vacaciones + V. Entrada"}
                           </p>
                           <p className="text-[10px] text-muted-foreground">
                             {format(parseISO(block.start), "d MMM", { locale: es })} - {format(addDays(parseISO(block.start), block.duration - 1), "d MMM", { locale: es })}
