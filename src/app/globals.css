@@ -78,9 +78,9 @@
   color: #2B1A0A;
 }
 
-/* Primer Día de Rotación (Sin Vuelos): Azul Vacaciones -> Naranja Rotación (Diagonal 45deg) */
+/* Primer Día de Rotación (Sin Vuelos): Azul Vacaciones -> Naranja Rotación (Diagonal 135deg) */
 .day-rotation-start-hidden-split {
-  background: linear-gradient(45deg, #c6d9f1 50%, #ffc000 50%); 
+  background: linear-gradient(135deg, #c6d9f1 50%, #ffc000 50%); 
   color: #2B1A0A;
 }
 
