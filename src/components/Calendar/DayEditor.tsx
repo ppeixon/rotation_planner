@@ -6,13 +6,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { DayEvent, DayType } from "@/lib/types";
+import { DayEvent, DayType, TicketStatus } from "@/lib/types";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { Plane, Calendar as CalendarIcon, StickyNote, X, AlertCircle } from "lucide-react";
+import { Train, Plane, Calendar as CalendarIcon, StickyNote, AlertCircle, Check, X, MinusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -23,25 +22,129 @@ interface DayEditorProps {
   onSave: (dateKey: string, data: Partial<DayEvent>) => void;
 }
 
+type TicketStatusOption = {
+  value: TicketStatus;
+  label: string;
+  icon: React.ReactNode;
+  activeClass: string;
+  inactiveClass: string;
+};
+
+const TRAIN_OPTIONS: TicketStatusOption[] = [
+  {
+    value: "PENDING",
+    label: "Falta",
+    icon: <X className="w-4 h-4" />,
+    activeClass: "bg-red-500 text-white border-red-600 shadow-md shadow-red-200",
+    inactiveClass: "border-red-200 text-red-400 hover:bg-red-50",
+  },
+  {
+    value: "PURCHASED",
+    label: "Comprado",
+    icon: <Check className="w-4 h-4" />,
+    activeClass: "bg-emerald-500 text-white border-emerald-600 shadow-md shadow-emerald-200",
+    inactiveClass: "border-emerald-200 text-emerald-400 hover:bg-emerald-50",
+  },
+  {
+    value: "NOT_NEEDED",
+    label: "No necesario",
+    icon: <MinusCircle className="w-4 h-4" />,
+    activeClass: "bg-zinc-400 text-white border-zinc-500 shadow-md",
+    inactiveClass: "border-zinc-200 text-zinc-400 hover:bg-zinc-50",
+  },
+];
+
+const FLIGHT_OPTIONS: TicketStatusOption[] = [
+  {
+    value: "PENDING",
+    label: "Falta",
+    icon: <X className="w-4 h-4" />,
+    activeClass: "bg-red-500 text-white border-red-600 shadow-md shadow-red-200",
+    inactiveClass: "border-red-200 text-red-400 hover:bg-red-50",
+  },
+  {
+    value: "PURCHASED",
+    label: "Comprado",
+    icon: <Check className="w-4 h-4" />,
+    activeClass: "bg-emerald-500 text-white border-emerald-600 shadow-md shadow-emerald-200",
+    inactiveClass: "border-emerald-200 text-emerald-400 hover:bg-emerald-50",
+  },
+  {
+    value: "NOT_NEEDED",
+    label: "No necesario",
+    icon: <MinusCircle className="w-4 h-4" />,
+    activeClass: "bg-zinc-400 text-white border-zinc-500 shadow-md",
+    inactiveClass: "border-zinc-200 text-zinc-400 hover:bg-zinc-50",
+  },
+];
+
+function TicketStatusSelector({
+  label,
+  icon,
+  value,
+  options,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  value: TicketStatus | undefined;
+  options: TicketStatusOption[];
+  onChange: (val: TicketStatus) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-muted-foreground">{icon}</span>
+        <Label className="text-sm font-semibold">{label}</Label>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {options.map((opt) => {
+          const isActive = value === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange(opt.value)}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 rounded-xl border-2 py-3 px-2 text-[11px] font-bold transition-all duration-200 select-none",
+                isActive ? opt.activeClass : opt.inactiveClass,
+                !isActive && "opacity-70",
+                disabled && "cursor-default opacity-50",
+                !disabled && "cursor-pointer active:scale-95"
+              )}
+            >
+              {opt.icon}
+              <span>{opt.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
   const { isReadOnly } = useAuth();
   const [dayType, setDayType] = useState<DayType>("ROTATION");
-  const [ticketPurchased, setTicketPurchased] = useState(false);
-  const [ticketPending, setTicketPending] = useState(false);
+  const [trainStatus, setTrainStatus] = useState<TicketStatus | undefined>(undefined);
+  const [flightStatus, setFlightStatus] = useState<TicketStatus | undefined>(undefined);
   const [flightInfo, setFlightInfo] = useState("");
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (event) {
       setDayType(event.dayType);
-      setTicketPurchased(event.flightTicketPurchased || false);
-      setTicketPending(event.flightTicketPending || false);
+      setTrainStatus(event.trainStatus ?? undefined);
+      setFlightStatus(event.flightStatus ?? undefined);
       setFlightInfo(event.flightInfo || "");
       setNotes(event.notes || "");
     } else {
       setDayType("ROTATION");
-      setTicketPurchased(false);
-      setTicketPending(false);
+      setTrainStatus(undefined);
+      setFlightStatus(undefined);
       setFlightInfo("");
       setNotes("");
     }
@@ -49,13 +152,24 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
 
   if (!date) return null;
 
+  const isTravelDay = dayType === "TRAVEL_ENTRY" || dayType === "TRAVEL_EXIT";
+
   const handleSave = () => {
     if (isReadOnly) return;
+
+    // Derive legacy fields from new status for backward compatibility
+    const flightTicketPurchased = flightStatus === "PURCHASED";
+    const flightTicketPending = flightStatus === "PENDING";
+
     onSave(date, {
       dayType,
-      flightTicketPurchased: ticketPurchased,
-      flightTicketPending: ticketPending,
+      // Legacy
+      flightTicketPurchased,
+      flightTicketPending,
       flightInfo,
+      // New
+      trainStatus: isTravelDay ? trainStatus : undefined,
+      flightStatus: isTravelDay ? flightStatus : undefined,
       notes,
     });
     onClose();
@@ -71,7 +185,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
 
   return (
     <Dialog open={!!date} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarIcon className="w-5 h-5 text-primary" />
@@ -87,6 +201,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
             </div>
           )}
 
+          {/* Day type selector */}
           <div className="space-y-3">
             <Label className="text-base font-semibold">Tipo de día</Label>
             <RadioGroup
@@ -114,46 +229,39 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
             </RadioGroup>
           </div>
 
-          {(dayType === "TRAVEL_ENTRY" || dayType === "TRAVEL_EXIT" || dayType === "ROTATION" || dayType === "STANDBY") && (
+          {/* Travel ticket section — only for travel days */}
+          {isTravelDay && (
             <div className="space-y-4 border-t pt-4">
-               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Plane className="w-4 h-4 text-muted-foreground" />
-                  <Label htmlFor="ticket">Billete comprado</Label>
-                </div>
-                <Switch
-                  id="ticket"
-                  disabled={isReadOnly}
-                  checked={ticketPurchased}
-                  onCheckedChange={(val) => {
-                    setTicketPurchased(val);
-                    if (val) setTicketPending(false);
-                  }}
-                />
-              </div>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Billetes de transporte
+              </p>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <X className="w-4 h-4 text-destructive" />
-                  <Label htmlFor="pending">TICKET PENDIENTE</Label>
-                </div>
-                <Switch
-                  id="pending"
-                  disabled={isReadOnly}
-                  checked={ticketPending}
-                  onCheckedChange={(val) => {
-                    setTicketPending(val);
-                    if (val) setTicketPurchased(false);
-                  }}
-                />
-              </div>
+              <TicketStatusSelector
+                label="Tren"
+                icon={<Train className="w-4 h-4" />}
+                value={trainStatus}
+                options={TRAIN_OPTIONS}
+                onChange={setTrainStatus}
+                disabled={isReadOnly}
+              />
+
+              <TicketStatusSelector
+                label="Avión"
+                icon={<Plane className="w-4 h-4" />}
+                value={flightStatus}
+                options={FLIGHT_OPTIONS}
+                onChange={setFlightStatus}
+                disabled={isReadOnly}
+              />
 
               <div className="space-y-2">
-                <Label htmlFor="flightInfo" className="text-sm">Travel Ticket Info</Label>
+                <Label htmlFor="flightInfo" className="text-sm">
+                  Info del viaje
+                </Label>
                 <Input
                   id="flightInfo"
                   disabled={isReadOnly}
-                  placeholder="Vuelo AH2004, 15:30h..."
+                  placeholder="Vuelo AH2004, Tren AVE 15:30h..."
                   value={flightInfo}
                   onChange={(e) => setFlightInfo(e.target.value)}
                 />
@@ -161,6 +269,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
             </div>
           )}
 
+          {/* Notes */}
           <div className="space-y-2 border-t pt-4">
             <div className="flex items-center gap-2">
               <StickyNote className="w-4 h-4 text-muted-foreground" />
@@ -170,7 +279,7 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
               id="notes"
               disabled={isReadOnly}
               placeholder="Añadir notas adicionales..."
-              className="min-h-[100px]"
+              className="min-h-[80px]"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />

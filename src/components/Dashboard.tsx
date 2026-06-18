@@ -55,7 +55,8 @@ import {
   addDays,
   getDaysInMonth,
   parseISO,
-  differenceInDays
+  differenceInDays,
+  isToday
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { 
@@ -120,6 +121,46 @@ export function Dashboard() {
   // Timer for single/double click distinction
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastChartClickRef = useRef<{ time: number; index: number | null }>({ time: 0, index: null });
+
+  // Countdown to next plan change
+  const countdownInfo = useMemo(() => {
+    const today = new Date();
+    const todayKey = format(today, "yyyy-MM-dd");
+    const todayType = events[todayKey]?.dayType;
+
+    let currentPhase: "VACATION" | "ROTATION" | null = null;
+    if (todayType === "VACATION" || todayType === "TRAVEL_ENTRY") currentPhase = "VACATION";
+    else if (todayType === "ROTATION" || todayType === "TRAVEL_EXIT") currentPhase = "ROTATION";
+
+    if (!currentPhase) return null;
+
+    let daysLeft = 0;
+    let scanDate = addDays(today, 1);
+    for (let i = 0; i < 400; i++) {
+      const key = format(scanDate, "yyyy-MM-dd");
+      const evType = events[key]?.dayType;
+      const isOpposite =
+        currentPhase === "VACATION"
+          ? evType === "ROTATION" || evType === "TRAVEL_EXIT"
+          : evType === "VACATION" || evType === "TRAVEL_ENTRY";
+      if (isOpposite) break;
+      daysLeft++;
+      scanDate = addDays(scanDate, 1);
+      if (daysLeft > 365) break;
+    }
+
+    const isVacation = currentPhase === "VACATION";
+    return {
+      daysLeft,
+      isVacation,
+      textColor: isVacation ? "#1e3a8a" : "#92400e",
+      bgColor: isVacation ? "rgba(198,217,241,0.25)" : "rgba(255,192,0,0.15)",
+      borderColor: isVacation ? "rgba(198,217,241,0.7)" : "rgba(255,192,0,0.5)",
+      dotColor: isVacation ? "#c6d9f1" : "#ffc000",
+      label: isVacation ? "vacaciones" : "rotación",
+      nextLabel: isVacation ? "rotación" : "vacaciones",
+    };
+  }, [events]);
 
   // Stats for current view (Monthly or Annual)
   const stats = useMemo(() => {
@@ -650,24 +691,51 @@ export function Dashboard() {
                 </TabsList>
               </Tabs>
 
-              <div className="flex-1 flex justify-start md:justify-start">
-                <div className="flex items-center gap-4 bg-card px-4 py-2 rounded-full border shadow-sm">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prev}>
-                    <ChevronLeft className="w-5 h-5" />
-                  </Button>
-                  <h2 className="font-headline font-bold text-base min-w-[140px] text-center uppercase tracking-wide">
-                    {periodLabel}
-                  </h2>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={next}>
-                    <ChevronRight className="w-5 h-5" />
-                  </Button>
-                </div>
+              {/* ← Year/Month nav → */}
+              <div className="flex items-center gap-4 bg-card px-4 py-2 rounded-full border shadow-sm shrink-0">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prev}>
+                  <ChevronLeft className="w-5 h-5" />
+                </Button>
+                <h2 className="font-headline font-bold text-base min-w-[140px] text-center uppercase tracking-wide">
+                  {periodLabel}
+                </h2>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={next}>
+                  <ChevronRight className="w-5 h-5" />
+                </Button>
               </div>
 
+              {/* Countdown pill – centrado en el espacio restante */}
+              {countdownInfo && (
+                <div
+                  className="flex items-center gap-2.5 px-4 py-2 rounded-full text-sm font-semibold select-none shrink-0"
+                  style={{
+                    background: countdownInfo.bgColor,
+                    border: `1.5px solid ${countdownInfo.borderColor}`,
+                    color: countdownInfo.textColor,
+                    boxShadow: `0 2px 10px ${countdownInfo.borderColor}`,
+                    transition: "all 0.4s ease",
+                  }}
+                >
+                  <span
+                    className="inline-block w-2 h-2 rounded-full animate-pulse shrink-0"
+                    style={{ background: countdownInfo.dotColor, boxShadow: `0 0 5px ${countdownInfo.dotColor}` }}
+                  />
+                  <span className="whitespace-nowrap">
+                    <span className="text-base font-extrabold" style={{ color: countdownInfo.textColor }}>
+                      {countdownInfo.daysLeft}
+                    </span>
+                    {" "}d{countdownInfo.daysLeft !== 1 ? "ías" : "ía"} de{" "}
+                    <strong>{countdownInfo.label}</strong>
+                    {" "}→ <strong>{countdownInfo.nextLabel}</strong>
+                  </span>
+                </div>
+              )}
+
+              {/* Histórico Anual (solo vista anual) */}
               {view === "annual" && (
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="outline"
                     onClick={() => setYearlyStatsDialogOpen(true)}
                     className="gap-2 rounded-full border-primary/20 hover:bg-primary/5 hover:border-primary/40 text-xs font-bold uppercase tracking-widest h-10 px-6 transition-all"
                   >
