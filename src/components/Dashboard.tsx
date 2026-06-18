@@ -8,6 +8,7 @@ import { DayEditor } from "./Calendar/DayEditor";
 import { BlockEditor } from "./Calendar/BlockEditor";
 import { RotationGenerator } from "./RotationGenerator";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -70,11 +71,121 @@ import {
   MousePointer2,
   History,
   TrendingUp,
-  Trash2
+  Trash2,
+  BadgeEuro
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { DayType } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+type MonthlySalaryEntry = {
+  month: Date; monthKey: string; monthLabel: string;
+  rotationDays: number; travelDays: number;
+  monthlyBase: number; dailyAllowance: number; fieldwork: number; total: number;
+};
+
+function SalaryView({
+  year, view, currentMonthKey, monthlySalaryData, settings, onUpdateSetting,
+}: {
+  year: number;
+  view: "annual" | "monthly";
+  currentMonthKey: string;
+  monthlySalaryData: MonthlySalaryEntry[];
+  settings: { baseSalary: number; dailyAllowance: number };
+  onUpdateSetting: (key: "baseSalary" | "dailyAllowance", val: string) => void;
+}) {
+  const fmt = (n: number) => n.toLocaleString("es-ES", { maximumFractionDigits: 0 });
+
+  const settingsBar = (
+    <div className="flex flex-wrap gap-4 items-center p-4 bg-muted/20 rounded-2xl border mb-6">
+      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mr-1">Parámetros {year}</span>
+      <div className="flex items-center gap-2">
+        <Label className="text-xs font-semibold whitespace-nowrap">Sueldo base anual</Label>
+        <Input
+          type="number"
+          defaultValue={settings.baseSalary}
+          key={`base-${year}`}
+          onBlur={(e) => onUpdateSetting("baseSalary", e.target.value)}
+          className="w-28 h-8 text-sm"
+        />
+        <span className="text-xs text-muted-foreground">€/año</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Label className="text-xs font-semibold whitespace-nowrap">Dieta/día</Label>
+        <Input
+          type="number"
+          defaultValue={settings.dailyAllowance}
+          key={`diet-${year}`}
+          onBlur={(e) => onUpdateSetting("dailyAllowance", e.target.value)}
+          className="w-20 h-8 text-sm"
+        />
+        <span className="text-xs text-muted-foreground">€/día</span>
+      </div>
+    </div>
+  );
+
+  if (view === "monthly") {
+    const d = monthlySalaryData.find(x => x.monthKey === currentMonthKey);
+    if (!d) return settingsBar;
+    return (
+      <div>
+        {settingsBar}
+        <div className="max-w-sm mx-auto border rounded-2xl p-6 bg-card shadow-sm space-y-4">
+          <h3 className="text-lg font-bold capitalize text-primary">{d.monthLabel} {year}</h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-muted-foreground">Días de rotación</span><span className="font-bold">{d.rotationDays} d</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Días de viaje</span><span className="font-bold">{d.travelDays} d</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Base mensual ({fmt(settings.baseSalary)} / 12)</span><span>{fmt(d.monthlyBase)} €</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Dietas ({d.rotationDays + d.travelDays} d × {d.dailyAllowance} €)</span><span>{fmt(d.fieldwork)} €</span></div>
+          </div>
+          <div className="pt-4 border-t flex justify-between items-center">
+            <span className="text-sm font-bold uppercase">Total estimado</span>
+            <span className="text-2xl font-black text-primary">{fmt(d.total)} €</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const annualTotal = monthlySalaryData.reduce((s, d) => s + d.total, 0);
+
+  return (
+    <div>
+      {settingsBar}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {monthlySalaryData.map(d => (
+          <div key={d.monthKey} className="border rounded-2xl p-4 bg-card shadow-sm flex flex-col gap-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-primary capitalize">{d.monthLabel}</h3>
+            <div className="space-y-1 text-xs flex-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Rotación + viaje</span>
+                <span className="font-semibold">{d.rotationDays + d.travelDays} d</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Base mensual</span>
+                <span>{fmt(d.monthlyBase)} €</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Dietas</span>
+                <span>{fmt(d.fieldwork)} €</span>
+              </div>
+            </div>
+            <div className="pt-2 border-t flex justify-between items-center">
+              <span className="text-[10px] font-bold uppercase text-muted-foreground">Total</span>
+              <span className="text-base font-black text-primary">{fmt(d.total)} €</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 flex justify-end">
+        <div className="border rounded-2xl px-6 py-3 bg-primary/5 flex items-center gap-4">
+          <span className="text-sm font-bold uppercase tracking-wider">Total anual estimado</span>
+          <span className="text-2xl font-black text-primary">{fmt(annualTotal)} €</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const CHART_COLORS: Record<string, string> = {
   VACATION: "#c6d9f1",
@@ -110,6 +221,32 @@ export function Dashboard() {
     duration: number;
     type: DayType;
   } | null>(null);
+
+  // Salary mode
+  const [salaryMode, setSalaryMode] = useState(false);
+  const [salarySettings, setSalarySettings] = useState<Record<number, { baseSalary: number; dailyAllowance: number }>>({});
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("arp_salary_settings");
+      if (saved) setSalarySettings(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  const getSettingsForYear = useCallback((year: number) => ({
+    baseSalary: salarySettings[year]?.baseSalary ?? 101000,
+    dailyAllowance: salarySettings[year]?.dailyAllowance ?? 450,
+  }), [salarySettings]);
+
+  const updateSalarySetting = useCallback((year: number, key: "baseSalary" | "dailyAllowance", raw: string) => {
+    const value = parseFloat(raw);
+    if (isNaN(value) || value < 0) return;
+    setSalarySettings(prev => {
+      const current = { baseSalary: prev[year]?.baseSalary ?? 101000, dailyAllowance: prev[year]?.dailyAllowance ?? 450 };
+      const updated = { ...prev, [year]: { ...current, [key]: value } };
+      try { localStorage.setItem("arp_salary_settings", JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+  }, []);
 
   // Drag & Drop States
   const [dragState, setDragState] = useState<{
@@ -312,6 +449,37 @@ export function Dashboard() {
     return blocks;
   }, [events, currentDate, view]);
 
+  const yearMonths = eachMonthOfInterval({
+    start: startOfYear(currentDate),
+    end: endOfYear(currentDate),
+  });
+
+  const monthlySalaryData = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const { baseSalary, dailyAllowance } = getSettingsForYear(year);
+    const monthlyBase = baseSalary / 12;
+    return yearMonths.map(month => {
+      const monthKey = format(month, "yyyy-MM");
+      const prevMonthKey = format(subMonths(month, 1), "yyyy-MM");
+      let rotationDays = 0;
+      let travelDays = 0;
+      Object.entries(events).forEach(([k, ev]) => {
+        if (!k.startsWith(prevMonthKey)) return;
+        if (ev.dayType === "ROTATION") rotationDays++;
+        else if (ev.dayType === "TRAVEL_ENTRY" || ev.dayType === "TRAVEL_EXIT") travelDays++;
+      });
+      const fieldwork = (rotationDays + travelDays) * dailyAllowance;
+      return {
+        month, monthKey,
+        monthLabel: format(month, "MMMM", { locale: es }),
+        prevMonthLabel: format(subMonths(month, 1), "MMMM", { locale: es }),
+        rotationDays, travelDays,
+        monthlyBase, dailyAllowance, fieldwork,
+        total: monthlyBase + fieldwork,
+      };
+    });
+  }, [events, currentDate, yearMonths, getSettingsForYear]);
+
   // Handlers
   const handleDayMouseDown = useCallback((date: Date, type: string) => {
     const dateKey = format(date, "yyyy-MM-dd");
@@ -492,11 +660,6 @@ export function Dashboard() {
     lastChartClickRef.current = { time: now, index: activeIndex };
   };
 
-  const yearMonths = eachMonthOfInterval({
-    start: startOfYear(currentDate),
-    end: endOfYear(currentDate),
-  });
-
   const periodLabel = view === "monthly" ? format(currentDate, "MMMM yyyy", { locale: es }) : format(currentDate, "yyyy");
 
   return (
@@ -509,6 +672,15 @@ export function Dashboard() {
             </div>
             <h1 className="font-headline font-bold text-lg hidden lg:block tracking-tight">Algeria Rotation Planner</h1>
             <h1 className="font-headline font-bold text-lg lg:hidden">ARP</h1>
+            <Button
+              variant={salaryMode ? "default" : "outline"}
+              size="icon"
+              className="rounded-xl h-9 w-9"
+              onClick={() => setSalaryMode(v => !v)}
+              title={salaryMode ? "Volver a rotaciones" : "Ver estimación salarial"}
+            >
+              <BadgeEuro className="w-5 h-5" />
+            </Button>
           </div>
 
           <div className="flex items-center gap-4">
@@ -766,12 +938,21 @@ export function Dashboard() {
 
             <div className={cn(
               "bg-card border rounded-2xl p-4 sm:p-6 shadow-sm min-h-[500px] transition-all",
-              dragState && "ring-2 ring-primary ring-offset-2 ring-inset"
+              !salaryMode && dragState && "ring-2 ring-primary ring-offset-2 ring-inset"
             )}>
-              {view === "monthly" ? (
-                <MonthGrid 
-                  monthDate={startOfMonth(currentDate)} 
-                  events={events} 
+              {salaryMode ? (
+                <SalaryView
+                  year={currentDate.getFullYear()}
+                  view={view}
+                  currentMonthKey={format(currentDate, "yyyy-MM")}
+                  monthlySalaryData={monthlySalaryData}
+                  settings={getSettingsForYear(currentDate.getFullYear())}
+                  onUpdateSetting={(key, val) => updateSalarySetting(currentDate.getFullYear(), key, val)}
+                />
+              ) : view === "monthly" ? (
+                <MonthGrid
+                  monthDate={startOfMonth(currentDate)}
+                  events={events}
                   onDayClick={onDayClickWrapper}
                   onDayMouseDown={handleDayMouseDown}
                   onDayMouseEnter={handleDayMouseEnter}
@@ -786,10 +967,10 @@ export function Dashboard() {
                   {yearMonths.map((m) => (
                     <div key={m.getTime()} className="space-y-3">
                       <h3 className="text-sm font-bold text-primary pl-1 uppercase tracking-wider">{format(m, "MMMM", { locale: es })}</h3>
-                      <MonthGrid 
-                        monthDate={m} 
-                        events={events} 
-                        mini 
+                      <MonthGrid
+                        monthDate={m}
+                        events={events}
+                        mini
                         onDayClick={onDayClickWrapper}
                         onDayMouseDown={handleDayMouseDown}
                         onDayMouseEnter={handleDayMouseEnter}
