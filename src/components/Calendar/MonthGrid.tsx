@@ -13,7 +13,8 @@ import {
   subDays
 } from "date-fns";
 import { cn } from "@/lib/utils";
-import { DayEvent, TicketStatus } from "@/lib/types";
+import { DayEvent } from "@/lib/types";
+
 import { Plane, Train, StickyNote, MoveHorizontal } from "lucide-react";
 import {
   Tooltip,
@@ -172,13 +173,13 @@ export const MonthGrid = React.memo(function MonthGrid({
                       {event.trainStatus && event.trainStatus !== "NOT_NEEDED" && (
                         <Train
                           className="w-3 h-3"
-                          style={{ color: event.trainStatus === "PURCHASED" ? "#10b981" : "#ef4444" }}
+                          style={{ color: event.trainStatus === "PURCHASED" ? "#000000" : "#ef4444" }}
                         />
                       )}
                       {event.flightStatus && event.flightStatus !== "NOT_NEEDED" && (
                         <Plane
                           className="w-3 h-3"
-                          style={{ color: event.flightStatus === "PURCHASED" ? "#10b981" : "#ef4444" }}
+                          style={{ color: event.flightStatus === "PURCHASED" ? "#000000" : "#ef4444" }}
                         />
                       )}
                     </div>
@@ -197,13 +198,13 @@ export const MonthGrid = React.memo(function MonthGrid({
                       {event.trainStatus && event.trainStatus !== "NOT_NEEDED" && (
                         <Train
                           className="w-2 h-2"
-                          style={{ color: event.trainStatus === "PURCHASED" ? "#10b981" : "#ef4444" }}
+                          style={{ color: event.trainStatus === "PURCHASED" ? "#000000" : "#ef4444" }}
                         />
                       )}
                       {event.flightStatus && event.flightStatus !== "NOT_NEEDED" && (
                         <Plane
                           className="w-2 h-2"
-                          style={{ color: event.flightStatus === "PURCHASED" ? "#10b981" : "#ef4444" }}
+                          style={{ color: event.flightStatus === "PURCHASED" ? "#000000" : "#ef4444" }}
                         />
                       )}
                     </div>
@@ -218,11 +219,13 @@ export const MonthGrid = React.memo(function MonthGrid({
             );
 
             // Conditional tooltip priority
+            const hasTrainInfo = event?.trainStatus && event.trainStatus !== "NOT_NEEDED";
+            const hasFlightInfo = event?.flightStatus && event.flightStatus !== "NOT_NEEDED";
             const showTooltip = isCurrentMonth && (
               event?.notes ||
               event?.flightInfo ||
-              event?.trainStatus ||
-              event?.flightStatus
+              hasTrainInfo ||
+              hasFlightInfo
             );
 
             if (showTooltip) {

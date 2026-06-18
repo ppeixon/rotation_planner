@@ -78,6 +78,8 @@ export function useRotation() {
       flightTicketPurchased: partial.flightTicketPurchased ?? existing?.flightTicketPurchased ?? false,
       flightTicketPending: partial.flightTicketPending ?? existing?.flightTicketPending ?? false,
       flightInfo: partial.flightInfo ?? existing?.flightInfo ?? "",
+      trainStatus: partial.trainStatus !== undefined ? partial.trainStatus : existing?.trainStatus,
+      flightStatus: partial.flightStatus !== undefined ? partial.flightStatus : existing?.flightStatus,
       notes: partial.notes ?? existing?.notes ?? "",
       source: "MANUAL",
       updatedAt: Date.now(),
@@ -87,6 +89,7 @@ export function useRotation() {
     
     setDocumentNonBlocking(dayRef, newEvent, { merge: true });
   }, [user, targetUid, db, events, isReadOnly]);
+
 
   const fillRestOfYearBatch = (batch: any, current: Date, state: "VAC" | "TE" | "ROT" | "TX", currentYear: number, endGen: Date, userId: string) => {
     let iterDate = current;

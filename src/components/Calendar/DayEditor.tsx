@@ -152,12 +152,10 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
 
   if (!date) return null;
 
-  const isTravelDay = dayType === "TRAVEL_ENTRY" || dayType === "TRAVEL_EXIT";
-
   const handleSave = () => {
     if (isReadOnly) return;
 
-    // Derive legacy fields from new status for backward compatibility
+    // Derive legacy fields from new flight status for backward compatibility
     const flightTicketPurchased = flightStatus === "PURCHASED";
     const flightTicketPending = flightStatus === "PENDING";
 
@@ -168,8 +166,8 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
       flightTicketPending,
       flightInfo,
       // New
-      trainStatus: isTravelDay ? trainStatus : undefined,
-      flightStatus: isTravelDay ? flightStatus : undefined,
+      trainStatus,
+      flightStatus,
       notes,
     });
     onClose();
@@ -229,45 +227,43 @@ export function DayEditor({ date, event, onClose, onSave }: DayEditorProps) {
             </RadioGroup>
           </div>
 
-          {/* Travel ticket section — only for travel days */}
-          {isTravelDay && (
-            <div className="space-y-4 border-t pt-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Billetes de transporte
-              </p>
+          {/* Transport ticket section — available for ALL day types */}
+          <div className="space-y-4 border-t pt-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Billetes de transporte
+            </p>
 
-              <TicketStatusSelector
-                label="Tren"
-                icon={<Train className="w-4 h-4" />}
-                value={trainStatus}
-                options={TRAIN_OPTIONS}
-                onChange={setTrainStatus}
+            <TicketStatusSelector
+              label="Tren"
+              icon={<Train className="w-4 h-4" />}
+              value={trainStatus}
+              options={TRAIN_OPTIONS}
+              onChange={setTrainStatus}
+              disabled={isReadOnly}
+            />
+
+            <TicketStatusSelector
+              label="Avión"
+              icon={<Plane className="w-4 h-4" />}
+              value={flightStatus}
+              options={FLIGHT_OPTIONS}
+              onChange={setFlightStatus}
+              disabled={isReadOnly}
+            />
+
+            <div className="space-y-2">
+              <Label htmlFor="flightInfo" className="text-sm">
+                Info del viaje
+              </Label>
+              <Input
+                id="flightInfo"
                 disabled={isReadOnly}
+                placeholder="Vuelo AH2004, Tren AVE 15:30h..."
+                value={flightInfo}
+                onChange={(e) => setFlightInfo(e.target.value)}
               />
-
-              <TicketStatusSelector
-                label="Avión"
-                icon={<Plane className="w-4 h-4" />}
-                value={flightStatus}
-                options={FLIGHT_OPTIONS}
-                onChange={setFlightStatus}
-                disabled={isReadOnly}
-              />
-
-              <div className="space-y-2">
-                <Label htmlFor="flightInfo" className="text-sm">
-                  Info del viaje
-                </Label>
-                <Input
-                  id="flightInfo"
-                  disabled={isReadOnly}
-                  placeholder="Vuelo AH2004, Tren AVE 15:30h..."
-                  value={flightInfo}
-                  onChange={(e) => setFlightInfo(e.target.value)}
-                />
-              </div>
             </div>
-          )}
+          </div>
 
           {/* Notes */}
           <div className="space-y-2 border-t pt-4">
