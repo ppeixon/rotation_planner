@@ -59,17 +59,18 @@ import {
   isToday
 } from "date-fns";
 import { es } from "date-fns/locale";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  LayoutGrid, 
-  Calendar as CalendarIcon, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  Calendar as CalendarIcon,
   LogOut,
   BarChart3,
   ListTodo,
   MousePointer2,
   History,
-  TrendingUp
+  TrendingUp,
+  Trash2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { DayType } from "@/lib/types";
@@ -93,7 +94,7 @@ const chartConfig = {
 
 export function Dashboard() {
   const { user, logout } = useAuth();
-  const { events, loading, updateDay, generateRotations, resyncChain, clearYear } = useRotation();
+  const { events, loading, updateDay, generateRotations, resyncChain, clearYear, deleteBlock } = useRotation();
   
   // States
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -139,6 +140,7 @@ export function Dashboard() {
     for (let i = 0; i < 400; i++) {
       const key = format(scanDate, "yyyy-MM-dd");
       const evType = events[key]?.dayType;
+      if (!evType) break;
       const isOpposite =
         currentPhase === "VACATION"
           ? evType === "ROTATION" || evType === "TRAVEL_EXIT"
@@ -456,6 +458,13 @@ export function Dashboard() {
     setBlockEditorOpen(true);
   };
 
+  const handleDeleteBlock = (e: React.MouseEvent, block: { type: DayType; start: string; duration: number }) => {
+    e.stopPropagation();
+    const label = block.type === "ROTATION" ? "rotación" : block.type === "VACATION" ? "vacaciones" : "standby";
+    if (!window.confirm(`¿Borrar el bloque de ${label} que empieza el ${format(parseISO(block.start), "d MMM yyyy", { locale: es })}?`)) return;
+    deleteBlock(block.start, block.duration, block.type);
+  };
+
   const next = () => {
     if (view === "monthly") setCurrentDate(addMonths(currentDate, 1));
     else setCurrentDate(addYears(currentDate, 1));
@@ -667,8 +676,17 @@ export function Dashboard() {
                           </p>
                         </div>
                       </div>
-                      <div className="bg-muted/30 px-2 py-1 rounded-md group-hover:bg-primary/20 transition-colors">
-                        <span className="text-sm font-bold text-primary">{block.duration} d</span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="bg-muted/30 px-2 py-1 rounded-md group-hover:bg-primary/20 transition-colors">
+                          <span className="text-sm font-bold text-primary">{block.duration} d</span>
+                        </div>
+                        <button
+                          onClick={(e) => handleDeleteBlock(e, block)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-red-100 text-red-400 hover:text-red-600"
+                          title="Borrar bloque"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   ))}

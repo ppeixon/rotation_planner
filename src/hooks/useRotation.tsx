@@ -70,6 +70,9 @@ export function useRotation() {
     const dayRef = doc(db, "users", targetUid, "dayEvents", dateKey);
     const existing = events[dateKey];
     
+    const resolvedTrainStatus = partial.trainStatus !== undefined ? partial.trainStatus : existing?.trainStatus;
+    const resolvedFlightStatus = partial.flightStatus !== undefined ? partial.flightStatus : existing?.flightStatus;
+
     const newEvent: Partial<DayEvent> = {
       ...existing,
       id: dateKey,
@@ -78,15 +81,15 @@ export function useRotation() {
       flightTicketPurchased: partial.flightTicketPurchased ?? existing?.flightTicketPurchased ?? false,
       flightTicketPending: partial.flightTicketPending ?? existing?.flightTicketPending ?? false,
       flightInfo: partial.flightInfo ?? existing?.flightInfo ?? "",
-      trainStatus: partial.trainStatus !== undefined ? partial.trainStatus : existing?.trainStatus,
-      flightStatus: partial.flightStatus !== undefined ? partial.flightStatus : existing?.flightStatus,
       notes: partial.notes ?? existing?.notes ?? "",
       source: "MANUAL",
       updatedAt: Date.now(),
       updatedBy: user.uid,
       userId: targetUid,
+      ...(resolvedTrainStatus !== undefined && { trainStatus: resolvedTrainStatus }),
+      ...(resolvedFlightStatus !== undefined && { flightStatus: resolvedFlightStatus }),
     };
-    
+
     setDocumentNonBlocking(dayRef, newEvent, { merge: true });
   }, [user, targetUid, db, events, isReadOnly]);
 
@@ -220,6 +223,36 @@ export function useRotation() {
     batch.commit();
   }, [user, targetUid, db, events, isReadOnly]);
 
+  const deleteBlock = useCallback((startDate: string, duration: number, type: DayType) => {
+    if (!user || !db || isReadOnly || !targetUid) return;
+    const batch = writeBatch(db);
+    let current = startOfDay(parseISO(startDate));
+    const currentYear = current.getFullYear();
+    const endGen = endOfYear(current);
+
+    // Poner los días del bloque como NORMAL (sin color)
+    for (let i = 0; i < duration; i++) {
+      if (current.getFullYear() !== currentYear) break;
+      const dk = format(current, "yyyy-MM-dd");
+      batch.set(doc(db, "users", targetUid, "dayEvents", dk), {
+        id: dk, dateKey: dk, dayType: "NORMAL", source: "GENERATED",
+        updatedAt: Date.now(), updatedBy: user.uid, userId: targetUid
+      }, { merge: true });
+      current = addDays(current, 1);
+    }
+
+    // Regenerar la cadena a partir del día siguiente al bloque
+    let nextState: "VAC" | "TE" | "ROT" | "TX" | null = null;
+    if (type === "VACATION") nextState = "ROT";
+    else if (type === "ROTATION") nextState = "VAC";
+
+    if (nextState) {
+      fillRestOfYearBatch(batch, current, nextState, currentYear, endGen, targetUid);
+    }
+
+    batch.commit();
+  }, [user, targetUid, db, isReadOnly, events]);
+
   const clearYear = useCallback((year: number) => {
     if (!user || !db || isReadOnly || !targetUid) return;
     const batch = writeBatch(db);
@@ -234,5 +267,5 @@ export function useRotation() {
     batch.commit();
   }, [user, targetUid, db, events, isReadOnly]);
 
-  return { settings, events, loading, updateDay, generateRotations, resyncChain, clearYear };
+  return { settings, events, loading, updateDay, generateRotations, resyncChain, clearYear, deleteBlock };
 }
