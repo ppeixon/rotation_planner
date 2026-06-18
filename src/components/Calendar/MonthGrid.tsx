@@ -13,8 +13,8 @@ import {
   subDays
 } from "date-fns";
 import { cn } from "@/lib/utils";
-import { DayEvent } from "@/lib/types";
-import { Plane, StickyNote, MoveHorizontal, Check, X } from "lucide-react";
+import { DayEvent, TicketStatus } from "@/lib/types";
+import { Plane, Train, StickyNote, MoveHorizontal } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -168,12 +168,18 @@ export const MonthGrid = React.memo(function MonthGrid({
                 {/* Main View Indicators */}
                 {isCurrentMonth && !mini && event && (
                   <>
-                    <div className="absolute bottom-1 left-1 text-current flex gap-0.5">
-                      {event.flightTicketPurchased && (
-                        <Check className="w-3 h-3 stroke-[3]" />
+                    <div className="absolute bottom-1 left-1 flex gap-0.5">
+                      {event.trainStatus && event.trainStatus !== "NOT_NEEDED" && (
+                        <Train
+                          className="w-3 h-3"
+                          style={{ color: event.trainStatus === "PURCHASED" ? "#10b981" : "#ef4444" }}
+                        />
                       )}
-                      {event.flightTicketPending && (
-                        <X className="w-3 h-3 stroke-[3] text-destructive" />
+                      {event.flightStatus && event.flightStatus !== "NOT_NEEDED" && (
+                        <Plane
+                          className="w-3 h-3"
+                          style={{ color: event.flightStatus === "PURCHASED" ? "#10b981" : "#ef4444" }}
+                        />
                       )}
                     </div>
                     {event.notes && (
@@ -187,12 +193,18 @@ export const MonthGrid = React.memo(function MonthGrid({
                 {/* Mini View Indicators */}
                 {isCurrentMonth && mini && event && (
                   <>
-                    <div className="absolute bottom-0 left-0 p-0.5 text-current flex gap-0.5">
-                      {event.flightTicketPurchased && (
-                        <Check className="w-2 h-2 stroke-[4]" />
+                    <div className="absolute bottom-0 left-0 p-0.5 flex gap-0.5">
+                      {event.trainStatus && event.trainStatus !== "NOT_NEEDED" && (
+                        <Train
+                          className="w-2 h-2"
+                          style={{ color: event.trainStatus === "PURCHASED" ? "#10b981" : "#ef4444" }}
+                        />
                       )}
-                      {event.flightTicketPending && (
-                        <X className="w-2 h-2 stroke-[4] text-destructive" />
+                      {event.flightStatus && event.flightStatus !== "NOT_NEEDED" && (
+                        <Plane
+                          className="w-2 h-2"
+                          style={{ color: event.flightStatus === "PURCHASED" ? "#10b981" : "#ef4444" }}
+                        />
                       )}
                     </div>
                     {event.notes && (
@@ -207,26 +219,25 @@ export const MonthGrid = React.memo(function MonthGrid({
 
             // Conditional tooltip priority
             const showTooltip = isCurrentMonth && (
-              event?.notes || 
-              event?.flightInfo || 
-              event?.flightTicketPurchased || 
-              event?.flightTicketPending
+              event?.notes ||
+              event?.flightInfo ||
+              event?.trainStatus ||
+              event?.flightStatus
             );
-            
+
             if (showTooltip) {
-              let tooltipText = "";
-              if (event?.flightTicketPending) {
-                tooltipText = "TICKET PENDIENTE de ser comprado";
-              } else if (event?.flightInfo) {
-                tooltipText = event.flightInfo;
-              } else if (event?.flightTicketPurchased) {
-                tooltipText = "Ticket OK";
+              const lines: string[] = [];
+              if (event?.trainStatus && event.trainStatus !== "NOT_NEEDED") {
+                const s = event.trainStatus === "PURCHASED" ? "✅ Comprado" : "❌ Falta";
+                lines.push(`Tren: ${s}`);
               }
-              
-              // Si aún no hay texto de billete, usamos la nota
-              if (!tooltipText && event?.notes) {
-                tooltipText = event.notes;
+              if (event?.flightStatus && event.flightStatus !== "NOT_NEEDED") {
+                const s = event.flightStatus === "PURCHASED" ? "✅ Comprado" : "❌ Falta";
+                lines.push(`Avión: ${s}`);
               }
+              if (event?.flightInfo) lines.push(event.flightInfo);
+              if (event?.notes) lines.push(event.notes);
+              const tooltipText = lines.join(" · ");
 
               if (!tooltipText) return <React.Fragment key={dateKey}>{dayContent}</React.Fragment>;
 
