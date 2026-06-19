@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { DayEvent, DayType, TicketStatus } from "@/lib/types";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { Train, Plane, Calendar as CalendarIcon, StickyNote, AlertCircle, Check, X, MinusCircle } from "lucide-react";
+import { Train, Plane, Calendar as CalendarIcon, StickyNote, AlertCircle, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -45,13 +45,6 @@ const TRAIN_OPTIONS: TicketStatusOption[] = [
     activeClass: "bg-emerald-500 text-white border-emerald-600 shadow-md shadow-emerald-200",
     inactiveClass: "border-emerald-200 text-emerald-400 hover:bg-emerald-50",
   },
-  {
-    value: "NOT_NEEDED",
-    label: "No necesario",
-    icon: <MinusCircle className="w-4 h-4" />,
-    activeClass: "bg-zinc-400 text-white border-zinc-500 shadow-md",
-    inactiveClass: "border-zinc-200 text-zinc-400 hover:bg-zinc-50",
-  },
 ];
 
 const FLIGHT_OPTIONS: TicketStatusOption[] = [
@@ -68,13 +61,6 @@ const FLIGHT_OPTIONS: TicketStatusOption[] = [
     icon: <Check className="w-4 h-4" />,
     activeClass: "bg-emerald-500 text-white border-emerald-600 shadow-md shadow-emerald-200",
     inactiveClass: "border-emerald-200 text-emerald-400 hover:bg-emerald-50",
-  },
-  {
-    value: "NOT_NEEDED",
-    label: "No necesario",
-    icon: <MinusCircle className="w-4 h-4" />,
-    activeClass: "bg-zinc-400 text-white border-zinc-500 shadow-md",
-    inactiveClass: "border-zinc-200 text-zinc-400 hover:bg-zinc-50",
   },
 ];
 
@@ -99,7 +85,7 @@ function TicketStatusSelector({
         <span className="text-muted-foreground">{icon}</span>
         <Label className="text-sm font-semibold">{label}</Label>
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {options.map((opt) => {
           const isActive = value === opt.value;
           return (
