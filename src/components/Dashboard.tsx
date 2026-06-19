@@ -617,14 +617,24 @@ export function Dashboard() {
     if (clickTimeoutRef.current) {
       clearTimeout(clickTimeoutRef.current);
       clickTimeoutRef.current = null;
-      handleDayClickAction(date);
+      // double click
+      if (view === "annual") {
+        handleDayClickAction(date);       // edita bloque
+      } else {
+        handleDayDoubleClickAction(date); // vuelve a vista anual
+      }
     } else {
       clickTimeoutRef.current = setTimeout(() => {
-        handleDayDoubleClickAction(date);
+        // single click
+        if (view === "annual") {
+          handleDayDoubleClickAction(date); // abre vista mensual
+        } else {
+          handleDayClickAction(date);       // edita día
+        }
         clickTimeoutRef.current = null;
       }, 250);
     }
-  }, [handleDayClickAction, handleDayDoubleClickAction]);
+  }, [handleDayClickAction, handleDayDoubleClickAction, view]);
 
   useEffect(() => {
     const handleMouseUp = () => {
