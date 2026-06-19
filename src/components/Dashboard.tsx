@@ -81,7 +81,8 @@ import { cn } from "@/lib/utils";
 type MonthlySalaryEntry = {
   month: Date; monthKey: string; monthLabel: string;
   rotationDays: number; travelDays: number;
-  monthlyBase: number; dailyAllowance: number; fieldwork: number; total: number;
+  monthlyBase: number; dailyAllowance: number; fieldwork: number;
+  irpfAmount: number; total: number; netTotal: number;
 };
 
 function SalaryView({
@@ -91,8 +92,8 @@ function SalaryView({
   view: "annual" | "monthly";
   currentMonthKey: string;
   monthlySalaryData: MonthlySalaryEntry[];
-  settings: { baseSalary: number; dailyAllowance: number };
-  onUpdateSetting: (key: "baseSalary" | "dailyAllowance", val: string) => void;
+  settings: { baseSalary: number; dailyAllowance: number; irpfRetention: number };
+  onUpdateSetting: (key: "baseSalary" | "dailyAllowance" | "irpfRetention", val: string) => void;
 }) {
   const fmt = (n: number) => n.toLocaleString("es-ES", { maximumFractionDigits: 0 });
 
@@ -121,6 +122,19 @@ function SalaryView({
         />
         <span className="text-xs text-muted-foreground">€/día</span>
       </div>
+      <div className="flex items-center gap-2">
+        <Label className="text-xs font-semibold whitespace-nowrap">Retención IRPF</Label>
+        <Input
+          type="number"
+          defaultValue={settings.irpfRetention}
+          key={`irpf-${year}`}
+          min={0}
+          max={100}
+          onBlur={(e) => onUpdateSetting("irpfRetention", e.target.value)}
+          className="w-16 h-8 text-sm"
+        />
+        <span className="text-xs text-muted-foreground">% s/ base</span>
+      </div>
     </div>
   );
 
@@ -137,10 +151,17 @@ function SalaryView({
             <div className="flex justify-between"><span className="text-muted-foreground">Días de viaje</span><span className="font-bold">{d.travelDays} d</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Base mensual ({fmt(settings.baseSalary)} / 12)</span><span>{fmt(d.monthlyBase)} €</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Dietas ({d.rotationDays + d.travelDays} d × {d.dailyAllowance} €)</span><span>{fmt(d.fieldwork)} €</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Retención IRPF ({settings.irpfRetention}% s/ base)</span><span className="text-destructive">-{fmt(d.irpfAmount)} €</span></div>
           </div>
-          <div className="pt-4 border-t flex justify-between items-center">
-            <span className="text-sm font-bold uppercase">Total estimado</span>
-            <span className="text-2xl font-black text-primary">{fmt(d.total)} €</span>
+          <div className="pt-4 border-t space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-muted-foreground uppercase">Bruto estimado</span>
+              <span className="text-base font-semibold">{fmt(d.total)} €</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-bold uppercase">Neto estimado</span>
+              <span className="text-2xl font-black text-primary">{fmt(d.netTotal)} €</span>
+            </div>
           </div>
         </div>
       </div>
@@ -148,6 +169,7 @@ function SalaryView({
   }
 
   const annualTotal = monthlySalaryData.reduce((s, d) => s + d.total, 0);
+  const annualNetTotal = monthlySalaryData.reduce((s, d) => s + d.netTotal, 0);
 
   return (
     <div>
@@ -169,18 +191,32 @@ function SalaryView({
                 <span className="text-muted-foreground">Dietas</span>
                 <span>{fmt(d.fieldwork)} €</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">IRPF</span>
+                <span className="text-destructive">-{fmt(d.irpfAmount)} €</span>
+              </div>
             </div>
-            <div className="pt-2 border-t flex justify-between items-center">
-              <span className="text-[10px] font-bold uppercase text-muted-foreground">Total</span>
-              <span className="text-base font-black text-primary">{fmt(d.total)} €</span>
+            <div className="pt-2 border-t space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-muted-foreground uppercase">Bruto</span>
+                <span className="text-xs text-muted-foreground">{fmt(d.total)} €</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground">Neto</span>
+                <span className="text-base font-black text-primary">{fmt(d.netTotal)} €</span>
+              </div>
             </div>
           </div>
         ))}
       </div>
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6 flex justify-end gap-4 flex-wrap">
+        <div className="border rounded-2xl px-6 py-3 bg-muted/20 flex items-center gap-4">
+          <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Bruto anual estimado</span>
+          <span className="text-xl font-bold text-muted-foreground">{fmt(annualTotal)} €</span>
+        </div>
         <div className="border rounded-2xl px-6 py-3 bg-primary/5 flex items-center gap-4">
-          <span className="text-sm font-bold uppercase tracking-wider">Total anual estimado</span>
-          <span className="text-2xl font-black text-primary">{fmt(annualTotal)} €</span>
+          <span className="text-sm font-bold uppercase tracking-wider">Neto anual estimado</span>
+          <span className="text-2xl font-black text-primary">{fmt(annualNetTotal)} €</span>
         </div>
       </div>
     </div>
@@ -224,7 +260,7 @@ export function Dashboard() {
 
   // Salary mode
   const [salaryMode, setSalaryMode] = useState(false);
-  const [salarySettings, setSalarySettings] = useState<Record<number, { baseSalary: number; dailyAllowance: number }>>({});
+  const [salarySettings, setSalarySettings] = useState<Record<number, { baseSalary: number; dailyAllowance: number; irpfRetention: number }>>({});
   useEffect(() => {
     try {
       const saved = localStorage.getItem("arp_salary_settings");
@@ -235,13 +271,14 @@ export function Dashboard() {
   const getSettingsForYear = useCallback((year: number) => ({
     baseSalary: salarySettings[year]?.baseSalary ?? 101000,
     dailyAllowance: salarySettings[year]?.dailyAllowance ?? 450,
+    irpfRetention: salarySettings[year]?.irpfRetention ?? 40,
   }), [salarySettings]);
 
-  const updateSalarySetting = useCallback((year: number, key: "baseSalary" | "dailyAllowance", raw: string) => {
+  const updateSalarySetting = useCallback((year: number, key: "baseSalary" | "dailyAllowance" | "irpfRetention", raw: string) => {
     const value = parseFloat(raw);
     if (isNaN(value) || value < 0) return;
     setSalarySettings(prev => {
-      const current = { baseSalary: prev[year]?.baseSalary ?? 101000, dailyAllowance: prev[year]?.dailyAllowance ?? 450 };
+      const current = { baseSalary: prev[year]?.baseSalary ?? 101000, dailyAllowance: prev[year]?.dailyAllowance ?? 450, irpfRetention: prev[year]?.irpfRetention ?? 40 };
       const updated = { ...prev, [year]: { ...current, [key]: value } };
       try { localStorage.setItem("arp_salary_settings", JSON.stringify(updated)); } catch {}
       return updated;
@@ -456,8 +493,9 @@ export function Dashboard() {
 
   const monthlySalaryData = useMemo(() => {
     const year = currentDate.getFullYear();
-    const { baseSalary, dailyAllowance } = getSettingsForYear(year);
+    const { baseSalary, dailyAllowance, irpfRetention } = getSettingsForYear(year);
     const monthlyBase = baseSalary / 12;
+    const irpfAmount = monthlyBase * irpfRetention / 100;
     return yearMonths.map(month => {
       const monthKey = format(month, "yyyy-MM");
       const prevMonthKey = format(subMonths(month, 1), "yyyy-MM");
@@ -469,13 +507,15 @@ export function Dashboard() {
         else if (ev.dayType === "TRAVEL_ENTRY" || ev.dayType === "TRAVEL_EXIT") travelDays++;
       });
       const fieldwork = (rotationDays + travelDays) * dailyAllowance;
+      const total = monthlyBase + fieldwork;
       return {
         month, monthKey,
         monthLabel: format(month, "MMMM", { locale: es }),
         prevMonthLabel: format(subMonths(month, 1), "MMMM", { locale: es }),
         rotationDays, travelDays,
         monthlyBase, dailyAllowance, fieldwork,
-        total: monthlyBase + fieldwork,
+        irpfAmount, total,
+        netTotal: total - irpfAmount,
       };
     });
   }, [events, currentDate, yearMonths, getSettingsForYear]);
