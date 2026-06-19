@@ -617,10 +617,10 @@ export function Dashboard() {
     if (clickTimeoutRef.current) {
       clearTimeout(clickTimeoutRef.current);
       clickTimeoutRef.current = null;
-      handleDayDoubleClickAction(date);
+      handleDayClickAction(date);
     } else {
       clickTimeoutRef.current = setTimeout(() => {
-        handleDayClickAction(date);
+        handleDayDoubleClickAction(date);
         clickTimeoutRef.current = null;
       }, 250);
     }
